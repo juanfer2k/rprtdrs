@@ -1,0 +1,6 @@
+{
+  "appId": "com.repartidores.app",
+  "appName": "repartidores",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}

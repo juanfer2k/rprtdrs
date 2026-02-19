@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    container_name: repartidores-app-1
+    volumes:
+      - ./www:/var/www/html
+    ports:
+      - "8081:80"
+    networks:
+      - repartidores_network
+
+networks:
+  repartidores_network:
+    driver: bridge

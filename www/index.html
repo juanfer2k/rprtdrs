@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Repartidor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="icon" href="assets/icon/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css?v=4.1" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body data-status="unavailable">
+
+<header class="app-header">
+    <img src="assets/imgs/logo.png" alt="Logo" class="logo">
+    <h1>Panel del Repartidor</h1>
+</header>
+
+<div id="map"></div>
+
+<div id="status-panel" class="collapsed">
+    <div id="panel-toggle"><span>›</span></div>
+    <div class="panel-content">
+        <div id="profile-info">
+            <div class="profile-pic"></div>
+            <div class="user-id-container">
+                <input type="text" id="repartidor-id-input" placeholder="Introduce tu ID de Repartidor">
+                <button id="load-profile-btn">Cargar</button>
+            </div>
+        </div>
+        <h3>Mi Estado</h3>
+        <div id="status-display">Actual: <span id="current-status">No disponible</span></div>
+        <button id="status-available" disabled>Disponible</button>
+        <button id="status-unavailable" disabled>No disponible</button>
+        <button id="status-pickup" disabled>En camino a recoger</button>
+        <button id="status-delivered" disabled>En camino a entrega</button>
+        <button id="status-order-delivered" class="order-delivered-btn" disabled>✓ Pedido Entregado</button>
+        <button id="get-location" disabled>Actualizar Mi Ubicación</button>
+        <button id="compass-toggle" disabled>Activar Brújula</button>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        let repartidorId = null;
+        let lastKnownPosition = null;
+        let watchId = null;
+        let compassActive = false;
+
+        // --- DOM Elements ---
+        const idInput = document.getElementById('repartidor-id-input');
+        const loadProfileBtn = document.getElementById('load-profile-btn');
+        // ... (resto de elementos)
+
+        function enableButtons() {
+            buttons.forEach(btn => btn.disabled = false);
+            compassToggleBtn.disabled = false;
+            document.getElementById('get-location').disabled = false;
+        }
+
+        loadProfileBtn.addEventListener('click', () => {
+            const enteredId = idInput.value.trim();
+            if (enteredId) {
+                repartidorId = enteredId;
+                idInput.disabled = true;
+                loadProfileBtn.disabled = true;
+                showToast(`Perfil ${repartidorId} cargado.`, '✓');
+                enableButtons();
+                requestLocationPermissions();
+                setStatus('status-unavailable');
+            } else {
+                showToast('Por favor, introduce un ID.', '!');
+            }
+        });
+
+        // ... (resto del código JavaScript sin cambios, solo asegúrate de que usen la variable `repartidorId`)
+
+    });
+</script>
+
+</body>
+</html>
