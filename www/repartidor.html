@@ -56,8 +56,15 @@
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
         // --- CONFIGURACIÓN ---
-        // Cambia esta URL por la de tu servidor real (ej: https://tudominio.com/rprtdrs/)
-        const BASE_URL = window.location.origin + window.location.pathname.replace('repartidor.html', '');
+        let BASE_URL = window.location.origin + window.location.pathname.replace('repartidor.html', '');
+        
+        // Si estamos en Capacitor (nativo), la URL de origen será local (capacitor:// o http://localhost)
+        // Debemos forzar la URL del servidor real para las peticiones API.
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            // REEMPLAZA ESTA URL POR TU DOMINIO REAL
+            BASE_URL = 'https://elcerritovalle.org/rprtdrs/'; 
+        }
+
         const UPDATE_URL = BASE_URL + 'actualizar_estado.php';
         const PROFILE_URL = BASE_URL + 'gestionar_repartidores.php?action=read';
 

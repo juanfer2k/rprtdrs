@@ -9,7 +9,7 @@ require_once __DIR__ . '/conex.php';
 
 try {
     // La consulta ya está correcta con el alias
-    $stmt = $pdo->query("SELECT id_repartidor, nombre_completo, latitud, longitud, estado, ultima_actualizacion AS ultimo_update, pedidos_entregados, activo FROM repartidores");
+    $stmt = $pdo->query("SELECT id_repartidor, nombre_completo, latitud, longitud, estado, ultima_actualizacion AS ultimo_update, activo FROM repartidores");
     echo json_encode($stmt->fetchAll());
 } catch (PDOException $e) {
     http_response_code(500);

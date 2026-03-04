@@ -1,7 +1,7 @@
 <?php
 // --- CONFIGURACIÓN PARA ENTORNO LOCAL (DOCKER) ---
-$host = "127.0.0.1";           // Usar 127.0.0.1 para conectar al puerto mapeado
-$port = "3307";                // El puerto que has mapeado para Docker
+$host = "host.docker.internal"; // Usar host.docker.internal para conectar al host desde el contenedor
+$port = "3307";                // El puerto que has mapeado para Docker en tu host
 $db   = "elcerrit_rprtdrs";
 $user = "elcerrit_rprtdrs";
 $pass = ']EzCPlz+I%i4';     // Tu contraseña de Docker
