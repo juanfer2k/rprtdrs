@@ -7,6 +7,7 @@
     <!-- Carga limpia de Estilos y Leaflet desde el CDN -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css?v=1.3" />
+    <link rel="icon" href="assets/icon/favicon.ico" type="image/x-icon">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body class="admin-view">
@@ -164,11 +165,6 @@
             }
         });
 
-        async function cargarRepartidoresParaGestion() { /* ... código sin cambios ... */ }
-        function actualizarEstadisticas(repartidores) { /* ... código sin cambios ... */ }
-        function actualizarMapaYLista(repartidores) { /* ... código sin cambios ... */ }
-
-        // --- Pegar aquí las funciones sin cambios para completitud ---
         async function cargarRepartidoresParaGestion() {
             const listContainer = document.getElementById('repartidores-list-gestion');
             try {
