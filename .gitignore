@@ -5,3 +5,8 @@ node_modules/
 .DS_Store
 .sourcemaps
 dist/
+www/conex.local.php
+.env
+.DS_Store
+www/debug_log.txt
+www/error_log

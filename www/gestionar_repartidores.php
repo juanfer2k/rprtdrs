@@ -1,21 +1,42 @@
 <?php
+// --- Archivo: www/gestionar_repartidores.php (VERSIÓN FINAL CORREGIDA) ---
+
 header('Content-Type: application/json');
 
-// --- Lógica de Entorno (Local vs. Producción) ---
-if (file_exists(__DIR__ . '/conex.local.php')) {
-    require_once 'conex.local.php';
-} else {
-    require_once 'conex.php';
-}
+// Incluir la conexión a la base de datos de forma robusta
+require_once __DIR__ . '/conex.php';
 
 $action = $_GET['action'] ?? null;
 
 switch ($action) {
+
     case 'read':
-        $stmt = $pdo->query("SELECT id_repartidor, nombre_completo, email, telefono, activo FROM repartidores ORDER BY nombre_completo");
+        // Esta acción devuelve la lista de usuarios para la tabla de "Gestión"
+        $stmt = $pdo->query("SELECT id_repartidor, nombre_completo, email, telefono, foto_url, activo FROM repartidores ORDER BY nombre_completo");
         echo json_encode($stmt->fetchAll());
         break;
+
+    case 'get_map_data':
+        // Esta acción es para el dashboard, pero la hemos delegado a obtener_ubicaciones.php
+        // La mantenemos funcional por si se usa en el futuro.
+        $stmt = $pdo->query("
+            SELECT
+                id_repartidor,
+                nombre_completo,
+                latitud,
+                longitud,
+                estado,
+                ultima_actualizacion AS ultimo_update,
+                activo
+            FROM repartidores
+            WHERE activo = 1
+        ");
+        echo json_encode($stmt->fetchAll());
+        break;
+
     default:
-        echo json_encode(['status' => 'error', 'message' => 'Acción no válida']);
+        http_response_code(400); // Bad Request
+        echo json_encode(['status' => 'error', 'message' => 'Acción no válida o no especificada.']);
         break;
 }
+?>

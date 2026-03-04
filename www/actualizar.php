@@ -15,7 +15,8 @@ if (isset($data['id_repartidor'], $data['lat'], $data['lng'], $data['estado'])) 
             UPDATE repartidores
             SET latitud = :lat,
                 longitud = :lng,
-                estado = :estado
+                estado = :estado,
+                ultima_actualizacion = NOW()
             WHERE id_repartidor = :id
         ";
 

@@ -7,6 +7,8 @@ services:
       - ./www:/var/www/html
     ports:
       - "8081:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - repartidores_network
 

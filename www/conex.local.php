@@ -1,10 +1,10 @@
 <?php
 // --- CONFIGURACIÓN PARA ENTORNO LOCAL (DOCKER) ---
-$host = "host.docker.internal"; // <-- ¡LA CLAVE! El DNS especial de Docker para el host.
-$port = "3307";                // El puerto que has mapeado
+$host = "127.0.0.1";           // Usar 127.0.0.1 para conectar al puerto mapeado
+$port = "3307";                // El puerto que has mapeado para Docker
 $db   = "elcerrit_rprtdrs";
 $user = "elcerrit_rprtdrs";
-$pass = "]EzCPlz+I%i4";     // Tu contraseña de Docker
+$pass = ']EzCPlz+I%i4';     // Tu contraseña de Docker
 
 // --- NO MODIFICAR DEBAJO DE ESTA LÍNEA ---
 $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8";

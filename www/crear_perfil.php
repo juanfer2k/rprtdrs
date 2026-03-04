@@ -1,17 +1,12 @@
 <?php
+// --- Archivo: www/crear_perfil.php (VERSIÓN FINAL Y CORREGIDA) ---
+
 ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 header("Content-Type: application/json");
 
-// --- Lógica de Entorno (Local vs. Producción) ---
-if (file_exists(__DIR__ . '/conex.local.php')) {
-    require_once 'conex.local.php';
-} else {
-    require_once 'conex.php';
-}
-
+require_once __DIR__ . '/conex.php';
 $response = ['status' => 'error', 'message' => 'Ocurrió un error inesperado.'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -19,52 +14,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nombre_completo = $_POST['nombre_completo'];
         $email = $_POST['email'];
         $telefono = $_POST['telefono'] ?? null;
-        $tipo_vehiculo = $_POST['tipo_vehiculo'] ?? null;
-        $placa_vehiculo = $_POST['placa_vehiculo'] ?? null;
-        $foto_path = null;
+        $foto_url = null; // Coincide con la columna 'foto_url' de la BD
 
-        // --- Lógica de Subida de Foto ---
+        // Lógica de subida de foto
         if (isset($_FILES['foto']) && $_FILES['foto']['error'] == UPLOAD_ERR_OK) {
             $upload_dir = __DIR__ . '/uploads/';
-            if (!file_exists($upload_dir)) {
-                if (!mkdir($upload_dir, 0755, true)) {
-                    $response['message'] = 'Error: No se pudo crear el directorio de subidas. Verifique los permisos.';
-                    echo json_encode($response);
-                    exit;
-                }
-            }
-            $tmp_name = $_FILES['foto']['tmp_name'];
+            if (!file_exists($upload_dir)) { mkdir($upload_dir, 0755, true); }
+
             $file_extension = pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION);
             $file_name = 'perfil_' . uniqid() . '.' . $file_extension;
             $destination = $upload_dir . $file_name;
 
-            if (move_uploaded_file($tmp_name, $destination)) {
-                $foto_path = 'uploads/' . $file_name;
-            } else {
-                $response['message'] = 'Error al mover el archivo subido.';
-                echo json_encode($response);
-                exit;
+            if (move_uploaded_file($_FILES['foto']['tmp_name'], $destination)) {
+                $foto_url = 'uploads/' . $file_name; // Guardamos la ruta en la variable correcta
             }
         }
 
-        // --- Inserción en la Base de Datos ---
+        // Inserción en la Base de Datos
         try {
-            $id_repartidor = 'REP-' . strtoupper(substr(uniqid(), -5));
-            $sql = "INSERT INTO repartidores (id_repartidor, nombre_completo, email, telefono, tipo_vehiculo, placa_vehiculo, foto_path, activo, estado, pedidos_entregados) VALUES (:id_repartidor, :nombre_completo, :email, :telefono, :tipo_vehiculo, :placa_vehiculo, :foto_path, 1, 'No disponible', 0)";
+            // No insertamos id_repartidor, dejamos que la BD lo genere con AUTO_INCREMENT
+            $sql = "INSERT INTO repartidores (nombre_completo, email, telefono, foto_url, activo, estado)
+                    VALUES (:nombre_completo, :email, :telefono, :foto_url, 1, 'No disponible')";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                ':id_repartidor' => $id_repartidor,
                 ':nombre_completo' => $nombre_completo,
                 ':email' => $email,
                 ':telefono' => $telefono,
-                ':tipo_vehiculo' => $tipo_vehiculo,
-                ':placa_vehiculo' => $placa_vehiculo,
-                ':foto_path' => $foto_path
+                ':foto_url' => $foto_url // Usamos la variable correcta
             ]);
 
+            $last_id = $pdo->lastInsertId(); // Obtenemos el ID numérico real
             $response['status'] = 'success';
-            $response['message'] = '¡Repartidor creado con éxito! ID: ' . $id_repartidor;
+            $response['message'] = '¡Repartidor creado con éxito! ID numérico: ' . $last_id;
 
         } catch (PDOException $e) {
             $response['message'] = 'Error de base de datos: ' . $e->getMessage();
@@ -80,3 +62,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 echo json_encode($response);
+?>

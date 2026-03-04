@@ -1,70 +1,69 @@
 <?php
-ini_set('display_errors', 0);
-ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/debug_log.txt');
+// --- Archivo: www/actualizar_estado.php ---
+// Este script recibe las actualizaciones de la App del Repartidor.
 
-// --- Lógica de Entorno (Local vs. Producción) ---
-if (file_exists(__DIR__ . '/conex.local.php')) {
-    require_once 'conex.local.php';
-} else {
-    require_once 'conex.php';
-}
-
-header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
+header('Content-Type: application/json');
+header("Access-Control-Allow-Origin: *"); // Permite peticiones desde cualquier origen.
+header("Access-Control-Allow-Methods: POST, OPTIONS"); // Métodos permitidos.
 header("Access-Control-Allow-Headers: Content-Type");
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+// Manejo de la petición pre-vuelo (preflight) OPTIONS.
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
 
-$raw_data = file_get_contents("php://input");
-$data = json_decode($raw_data, true);
+// Incluir la conexión a la base de datos.
+require_once __DIR__ . '/conex.php';
+// Leer el cuerpo de la petición (que viene en formato JSON).
+$json_data = file_get_contents('php://input');
+$data = json_decode($json_data);
 
-if (!$data || !isset($data['id_repartidor']) || !isset($data['estado'])) {
-    http_response_code(400);
-    echo json_encode(["status" => "error", "message" => "Datos incompletos."]);
+// Validar que los datos necesarios están presentes.
+if (!isset($data->id_repartidor) || !isset($data->latitud) || !isset($data->longitud) || !isset($data->estado)) {
+    http_response_code(400); // Bad Request
+    echo json_encode(['status' => 'error', 'message' => 'Faltan datos requeridos.']);
     exit;
 }
 
-$id_repartidor = $data['id_repartidor'];
-$estado = $data['estado'];
-$latitud = $data['latitud'] ?? null;
-$longitud = $data['longitud'] ?? null;
+// Limpiar los datos para seguridad.
+$id_repartidor = intval($data->id_repartidor);
+$latitud = floatval($data->latitud);
+$longitud = floatval($data->longitud);
+$estado = htmlspecialchars(strip_tags($data->estado));
+
+// Preparar la sentencia SQL para actualizar los datos del repartidor.
+// Usamos sentencias preparadas para prevenir inyección SQL.
+$sql = "UPDATE repartidores SET
+            latitud = :latitud,
+            longitud = :longitud,
+            estado = :estado,
+            ultima_actualizacion = NOW() -- Usamos la función de la BD para la hora del servidor
+        WHERE id_repartidor = :id_repartidor";
 
 try {
-    $sql = "UPDATE repartidores SET estado = :estado, ultima_actualizacion = NOW()";
-    $params = [':estado' => $estado];
-
-    if ($latitud !== null && $longitud !== null) {
-        $sql .= ", latitud = :latitud, longitud = :longitud";
-        $params[':latitud'] = $latitud;
-        $params[':longitud'] = $longitud;
-    }
-
-    // Incrementar el contador de pedidos entregados
-    if ($estado === 'Pedido Entregado') {
-        $sql .= ", pedidos_entregados = pedidos_entregados + 1";
-    }
-
-    $sql .= " WHERE id_repartidor = :id_repartidor";
-    $params[':id_repartidor'] = $id_repartidor;
-
     $stmt = $pdo->prepare($sql);
 
-    if ($stmt->execute($params)) {
+    // Vincular los parámetros.
+    $stmt->bindParam(':latitud', $latitud, PDO::PARAM_STR);
+    $stmt->bindParam(':longitud', $longitud, PDO::PARAM_STR);
+    $stmt->bindParam(':estado', $estado, PDO::PARAM_STR);
+    $stmt->bindParam(':id_repartidor', $id_repartidor, PDO::PARAM_INT);
+
+    // Ejecutar la consulta.
+    if ($stmt->execute()) {
         if ($stmt->rowCount() > 0) {
-            echo json_encode(["status" => "success", "message" => "Estado actualizado."]);
+            // Se actualizó la fila correctamente.
+            echo json_encode(['status' => 'success', 'message' => 'Ubicación y estado actualizados.']);
         } else {
-            echo json_encode(["status" => "warning", "message" => "No se encontró el repartidor o el estado ya era el mismo."]);
+            // No se encontró un repartidor con ese ID.
+            http_response_code(404); // Not Found
+            echo json_encode(['status' => 'warning', 'message' => 'Repartidor no encontrado.']);
         }
     } else {
-        throw new Exception("Falló la ejecución de la consulta.");
+        throw new Exception("Error en la ejecución de la consulta.");
     }
-
-} catch (PDOException $e) {
-    http_response_code(500);
-    error_log("Error de BD en actualizar_estado: " . $e->getMessage());
-    echo json_encode(["status" => "error", "message" => "Error en la base de datos."]);
+} catch (Exception $e) {
+    http_response_code(500); // Internal Server Error
+    error_log("Error en actualizar_estado.php: " . $e->getMessage());
+    echo json_encode(['status' => 'error', 'message' => 'Error interno del servidor al actualizar los datos.']);
 }
