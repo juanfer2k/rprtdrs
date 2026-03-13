@@ -10,3 +10,4 @@ www/conex.local.php
 .DS_Store
 www/debug_log.txt
 www/error_log
+*:Zone.Identifier

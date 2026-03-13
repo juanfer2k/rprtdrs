@@ -22,17 +22,12 @@
     <div class="panel-content">
 
         <div id="profile-section">
-            <div id="profile-loader">
-                <div class="user-id-container">
-                    <input type="text" id="repartidor-id-input" placeholder="Introduce tu ID de Repartidor">
-                    <button id="load-profile-btn">Cargar</button>
-                </div>
-            </div>
-            <div id="profile-display" style="display: none;">
+            <!-- El perfil se carga automáticamente vía inyección nativa del token/ID -->
+            <div id="profile-display">
                 <img id="profile-pic" src="assets/imgs/default-user.png" alt="Foto de perfil">
                 <div id="profile-details">
-                    <h4 id="profile-name">Nombre del Repartidor</h4>
-                    <span id="profile-id">ID: 123</span>
+                    <h4 id="profile-name">Cargando sesión...</h4>
+                    <span id="profile-id">Espere por favor</span>
                 </div>
             </div>
         </div>
@@ -58,31 +53,26 @@
         // --- CONFIGURACIÓN ---
         let BASE_URL = window.location.origin + window.location.pathname.replace('repartidor.html', '');
         
-        // Si estamos en Capacitor (nativo), la URL de origen será local (capacitor:// o http://localhost)
-        // Debemos forzar la URL del servidor real para las peticiones API.
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            // REEMPLAZA ESTA URL POR TU DOMINIO REAL
             BASE_URL = 'https://elcerritovalle.org/rprtdrs/'; 
         }
 
-        const UPDATE_URL = BASE_URL + 'actualizar_estado.php';
-        const PROFILE_URL = BASE_URL + 'gestionar_repartidores.php?action=read';
+        const TRACK_URL = BASE_URL + 'api/track.php';
 
         let repartidorId = null;
+        let apiToken = null;
         let lastKnownPosition = null;
         let watchId = null;
         let currentEstado = 'No disponible';
         let lastSentAt = 0;
         const SEND_EVERY_MS = 15000;
 
-        const idInput = document.getElementById('repartidor-id-input');
-        const loadProfileBtn = document.getElementById('load-profile-btn');
         const controlsWrapper = document.getElementById('controls-wrapper');
         const statusDisplay = document.getElementById('current-status');
         const panelToggle = document.getElementById('panel-toggle');
         const toastContainer = document.getElementById('toast-container');
-        const profileLoader = document.getElementById('profile-loader');
-        const profileDisplay = document.getElementById('profile-display');
+        const profileName = document.getElementById('profile-name');
+        const profileIdTag = document.getElementById('profile-id');
 
         const map = L.map('map', { zoomControl: false }).setView([4.60971, -74.08175], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OSM' }).addTo(map);
@@ -96,54 +86,30 @@
             'status-order-delivered': 'Pedido Entregado'
         };
 
-        // --- CAPACITOR INTEGRATION ---
-        const isCapacitor = window.Capacitor && window.Capacitor.isNativePlatform();
-        
-        async function getGeolocationPlugin() {
-            if (isCapacitor && window.Capacitor.Plugins.Geolocation) {
-                return window.Capacitor.Plugins.Geolocation;
-            }
-            return null;
-        }
-
         // --- FUNCIONES ---
-        async function loadStoredProfile() {
-            const storedId = localStorage.getItem('repartidor_id');
-            if (storedId) {
-                idInput.value = storedId;
-                // Intentar cargar perfil automáticamente si hay ID guardado
-                await loginWithId(storedId);
-            }
-        }
+        
+        function checkSession() {
+            apiToken = localStorage.getItem('api_token');
+            repartidorId = localStorage.getItem('repartidor_id');
 
-        async function loginWithId(enteredId) {
-            loadProfileBtn.textContent = 'Cargando...';
-            loadProfileBtn.disabled = true;
-
-            try {
-                const profileData = await fetchRepartidorProfile(enteredId);
-                repartidorId = enteredId;
-                localStorage.setItem('repartidor_id', enteredId);
-                displayProfileData(repartidorId, profileData);
+            if (apiToken && repartidorId) {
+                profileName.textContent = "Repartidor #" + repartidorId;
+                profileIdTag.textContent = "Sesión Activa";
                 controlsWrapper.classList.remove('disabled');
-                showToast(`¡Hola, ${profileData.nombre}!`, '✓');
                 startWatchingPosition();
                 setStatus('status-unavailable');
-            } catch (error) {
-                showToast(error.message, '!');
-                loadProfileBtn.textContent = 'Cargar';
-                loadProfileBtn.disabled = false;
+                return true;
             }
+            return false;
         }
 
-        loadProfileBtn.addEventListener('click', async () => {
-            const enteredId = idInput.value.trim();
-            if (!enteredId) { showToast('Introduce tu ID.', '!'); return; }
-            await loginWithId(enteredId);
-        });
-
-        // Al inicio
-        loadStoredProfile();
+        // Re-intentar cada segundo hasta que la inyección nativa funcione
+        const sessionInterval = setInterval(() => {
+            if (checkSession()) {
+                clearInterval(sessionInterval);
+                showToast("Sesión iniciada correctamente", "✓");
+            }
+        }, 1000);
 
         function showToast(message, icon) {
             const toast = document.createElement('div');
@@ -158,75 +124,56 @@
 
         function updateLocation(lat, lng) {
             lastKnownPosition = { lat, lng };
-            const newPos = [lat, lng];
-            userMarker.setLatLng(newPos);
-            map.panTo(newPos);
+            userMarker.setLatLng([lat, lng]);
+            map.panTo([lat, lng]);
         }
 
         async function sendUpdate(force = false) {
-            if (!repartidorId || !lastKnownPosition) return;
+            if (!apiToken || !lastKnownPosition) return;
             const now = Date.now();
             if (!force && (now - lastSentAt) < SEND_EVERY_MS) return;
             lastSentAt = now;
-            const payload = { id_repartidor: repartidorId, latitud: lastKnownPosition.lat, longitud: lastKnownPosition.lng, estado: currentEstado };
+
+            const payload = { 
+                lat: lastKnownPosition.lat, 
+                lng: lastKnownPosition.lng, 
+                estado: currentEstado 
+            };
+
             try {
-                const response = await fetch(UPDATE_URL, { 
+                const response = await fetch(TRACK_URL, { 
                     method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': apiToken
+                    }, 
                     body: JSON.stringify(payload),
                     mode: 'cors'
                 });
+                
                 const result = await response.json();
                 if (result.status === 'success') {
-                    console.log('Ubicación sincronizada');
+                    const indicator = document.getElementById('current-status');
+                    indicator.style.color = '#4CAF50'; 
+                    setTimeout(() => indicator.style.color = '', 1000);
                 }
-            } catch (err) { console.error('Error sincronizando:', err); }
+            } catch (err) { 
+                console.error('Error sincronizando:', err);
+            }
         }
 
         async function startWatchingPosition() {
-            const geo = await getGeolocationPlugin();
-            
-            const onPosition = (pos) => {
-                const coords = pos.coords || pos;
-                updateLocation(coords.latitude, coords.longitude);
+            if (watchId != null) navigator.geolocation.clearWatch(watchId);
+            watchId = navigator.geolocation.watchPosition((pos) => {
+                updateLocation(pos.coords.latitude, pos.coords.longitude);
                 sendUpdate(false);
-            };
-
-            const onError = (err) => {
-                console.error("Error de ubicación:", err);
-                showToast("Error de GPS: " + (err.message || "Permiso denegado"), "!");
-            };
-
-            if (geo) {
-                // Usar Capacitor para mayor robustez en móvil
-                try {
-                    const permissions = await geo.requestPermissions();
-                    if (permissions.location !== 'granted') {
-                        showToast("Permisos de ubicación necesarios", "!");
-                        return;
-                    }
-                    if (watchId) await geo.clearWatch({ id: watchId });
-                    watchId = await geo.watchPosition({
-                        enableHighAccuracy: true,
-                        timeout: 10000
-                    }, (pos, err) => {
-                        if (err) onError(err);
-                        else if (pos) onPosition(pos);
-                    });
-                } catch (e) {
-                    console.error("Error inicializando Capacitor Geo:", e);
-                }
-            } else if ('geolocation' in navigator) {
-                // Fallback para navegador
-                if (watchId != null) navigator.geolocation.clearWatch(watchId);
-                watchId = navigator.geolocation.watchPosition(onPosition, onError, { 
-                    enableHighAccuracy: true, 
-                    timeout: 20000, 
-                    maximumAge: 5000 
-                });
-            } else {
-                showToast("Geolocalización no soportada", "!");
-            }
+            }, (err) => {
+                showToast("GPS: Permiso denegado o sin señal", "!");
+            }, { 
+                enableHighAccuracy: true, 
+                timeout: 20000, 
+                maximumAge: 5000 
+            });
         }
 
         function setStatus(newStatusId) {
@@ -240,26 +187,20 @@
                 if (btn.id === newStatusId) btn.classList.add('active');
             });
             sendUpdate(true);
-            showToast("Estado: " + newStatusText, "✓");
         }
 
         const statusButtons = controlsWrapper.querySelectorAll('button[id^="status-"]');
         statusButtons.forEach(btn => btn.addEventListener('click', () => setStatus(btn.id)));
         panelToggle.addEventListener('click', () => document.getElementById('status-panel').classList.toggle('collapsed'));
+        
         document.getElementById('get-location').addEventListener('click', () => {
             showToast("Buscando señal GPS...", "🛰️");
             startWatchingPosition();
         });
 
-        // Compass Toggle Placeholder
-        let compassActive = false;
         document.getElementById('compass-toggle').addEventListener('click', () => {
-            compassActive = !compassActive;
-            document.getElementById('compass-toggle').classList.toggle('active', compassActive);
-            showToast(compassActive ? "Brújula activada" : "Brújula desactivada", "🧭");
-            if (compassActive) {
-                map.setZoom(18);
-            }
+            map.setZoom(18);
+            showToast("Zoom de precisión activado", "🧭");
         });
     });
 </script>

@@ -1,19 +1,11 @@
 <?php
-// --- Archivo: www/conex.php (VERSIÓN FINAL CON SOPORTE LOCAL) ---
+// --- Archivo: www/conex.php (CONFIGURACIÓN DINÁMICA) ---
 
-// SI EXISTE UN ARCHIVO LOCAL, USARLO Y SALIR
-if (file_exists(__DIR__ . '/conex.local.php')) {
-    require_once __DIR__ . '/conex.local.php';
-    return;
-}
+$host = getenv('DB_HOST') ?: "127.0.0.1";
+$db   = getenv('DB_NAME') ?: "logistica_db";
+$user = getenv('DB_USER') ?: "user_reparto";
+$pass = getenv('DB_PASS') ?: "pass_reparto";
 
-// --- CONFIGURACIÓN PARA SERVIDOR REMOTO (PRODUCCIÓN) ---
-$host = "127.0.0.1";         // Usar 127.0.0.1 en lugar de localhost para forzar conexión de red
-$db   = "elcerrit_rprtdrs";
-$user = "elcerrit_rprtdrs";
-$pass = ']EzCPlz+I%i4';     // Tu contraseña de producción
-
-// --- NO MODIFICAR DEBAJO DE ESTA LÍNEA ---
 $dsn = "mysql:host=$host;dbname=$db;charset=utf8";
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
@@ -25,9 +17,7 @@ try {
     $pdo = new PDO($dsn, $user, $pass, $options);
 } catch (PDOException $e) {
     http_response_code(500);
-    // Este error SÓLO se verá en el error_log del servidor, nunca al usuario final.
-    error_log("Error CRÍTICO de conexión a la BD: " . $e->getMessage());
-    // Respuesta genérica para el frontend para no exponer detalles.
+    error_log("Error de conexión a la BD: " . $e->getMessage());
     echo json_encode(["status" => "error", "message" => "Error de conexión interna."]);
     exit;
 }

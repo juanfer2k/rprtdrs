@@ -2,16 +2,41 @@ version: '3.8'
 services:
   app:
     build: .
-    container_name: repartidores-app-1
+    container_name: repartidores-api
     volumes:
       - ./www:/var/www/html
     ports:
       - "8081:80"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    environment:
+      - DB_HOST=db
+      - DB_NAME=logistica_db
+      - DB_USER=user_reparto
+      - DB_PASS=pass_reparto
+    depends_on:
+      - db
     networks:
-      - repartidores_network
+      - logistica_net
+
+  db:
+    image: mysql:8.0
+    container_name: repartidores-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: logistica_db
+      MYSQL_USER: user_reparto
+      MYSQL_PASSWORD: pass_reparto
+      MYSQL_ROOT_PASSWORD: root_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - mysql_data:/var/lib/mysql
+    networks:
+      - logistica_net
 
 networks:
-  repartidores_network:
+  logistica_net:
     driver: bridge
+
+volumes:
+  mysql_data:
