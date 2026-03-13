@@ -1,30 +1,30 @@
 #!/bin/bash
 
 # --- Script de Despliegue Automático (dp.sh) ---
-# Este script actualiza el repositorio y asegura los permisos correctos.
+# Copia el contenido de www/ a la raíz de la instancia
 
-echo "🚀 Iniciando actualización de rprtdrs..."
+echo "🚀 Iniciando actualización en el servidor..."
 
-# 1. Obtener cambios del repositorio
-echo "📥 Tirando de los últimos cambios desde GitHub..."
+# 1. Pull de cambios (dentro del repo)
+echo "📥 Obteniendo cambios de GitHub..."
 git pull origin master
 
-# 2. Configurar permisos
-# Aseguramos que el servidor web pueda leer los archivos y escribir en 'uploads'
-echo "🔐 Ajustando permisos de archivos..."
-chmod -R 755 www/
-if [ -d "www/uploads" ]; then
-    chmod -R 777 www/uploads/
+# 2. Copiar contenido de www/ a la raíz (.)
+echo "📂 Sincronizando carpeta www con la raíz..."
+cp -r www/* .
+
+# 3. Permisos
+echo "🔐 Ajustando permisos..."
+chmod -R 755 .
+if [ -d "uploads" ]; then
+    chmod -R 777 uploads/
 fi
 
-# 3. Sincronización de Capacitor (Si se han hecho cambios en la web)
-if command -v npx &> /dev/null; then
-    echo "📲 Sincronizando cambios con Capacitor..."
-    npx cap copy android
+# 4. Limpieza
+if [ -f "error_log" ]; then
+    rm error_log
+    touch error_log
+    chmod 666 error_log
 fi
 
-# 4. Docker (Opcional: Descomenta si quieres que el contenedor se reinicie)
-# echo "🐳 Reiniciando contenedores Docker..."
-# docker-compose up -d --build
-
-echo "✅ WebApp actualizada con éxito."
+echo "✅ WebApp actualizada y desplegada en la raíz."
