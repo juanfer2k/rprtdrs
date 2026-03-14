@@ -3,23 +3,23 @@
 # --- Script de Despliegue Automático (dp.sh) ---
 # Copia el contenido de www/ a la raíz de la instancia
 
-# Configuración - Ajusta esta ruta según tu servidor
-DEPLOY_DIR="$(pwd)"  # Usar directorio actual
+# Configuración
+DEPLOY_DIR="/home2/elcerrit/elcerritovalle.org/rprtdrs"
 REPO_URL="git@github.com:juanfer2k/rprtdrs.git"
 BRANCH="master"
 
 echo "🚀 Iniciando actualización en el servidor..."
-echo "📍 Directorio actual: $DEPLOY_DIR"
+echo "📍 Directorio: $DEPLOY_DIR"
 
 # 1. Verificar si es un repositorio git, si no, clonar
 if [ ! -d ".git" ]; then
     echo "📦 No se detectó repositorio Git. Clonando..."
-    # Intentar clonar en directorio actual
-    git clone -b $BRANCH $REPO_URL .
-    if [ $? -ne 0 ]; then
-        echo "❌ Error al clonar. Verifica que el directorio esté vacío o tenga permisos."
-        exit 1
+    if [ -d "$DEPLOY_DIR" ]; then
+        echo "⚠️  El directorio ya existe. Respaldando..."
+        mv "$DEPLOY_DIR" "${DEPLOY_DIR}_backup_$(date +%s)"
     fi
+    git clone -b $BRANCH $REPO_URL $DEPLOY_DIR
+    cd $DEPLOY_DIR
 fi
 
 # 2. Verificar que existe la carpeta www
