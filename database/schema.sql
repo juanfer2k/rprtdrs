@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    email VARCHAR(100) UNIQUE,
     rol ENUM('admin', 'repartidor') NOT NULL,
     api_token VARCHAR(255) UNIQUE NULL,
     activo BOOLEAN DEFAULT TRUE,
@@ -11,12 +12,15 @@ CREATE TABLE IF NOT EXISTS usuarios (
 );
 
 CREATE TABLE IF NOT EXISTS repartidores (
-    id_repartidor INT PRIMARY KEY,
+    id_repartidor INT AUTO_INCREMENT PRIMARY KEY,
     nombre_completo VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE,
     telefono VARCHAR(20),
+    foto_url VARCHAR(255),
     latitud DECIMAL(10, 8),
     longitud DECIMAL(11, 8),
     estado ENUM('Disponible', 'No disponible', 'En camino a recoger', 'En camino a entrega', 'Pedido Entregado', 'libre', 'ocupado', 'desconectado') DEFAULT 'No disponible',
+    activo BOOLEAN DEFAULT TRUE,
     ultima_actualizacion DATETIME,
     FOREIGN KEY (id_repartidor) REFERENCES usuarios(id) ON DELETE CASCADE
 );
@@ -60,5 +64,5 @@ INSERT INTO usuarios (username, password_hash, rol, api_token) VALUES
 ('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'token_admin_test'),
 ('repartidor1', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'repartidor', 'token_repartidor_test');
 
-INSERT INTO repartidores (id_repartidor, nombre_completo, telefono, estado_disponibilidad) VALUES 
+INSERT INTO repartidores (id_repartidor, nombre_completo, telefono, estado) VALUES 
 (2, 'Juan Perez', '123456789', 'desconectado');
