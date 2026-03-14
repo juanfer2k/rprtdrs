@@ -21,22 +21,30 @@ if [ ! -d ".git" ]; then
     cd $DEPLOY_DIR
 fi
 
-# 2. Pull de cambios
+# 2. Verificar que existe la carpeta www
+if [ ! -d "www" ]; then
+    echo "❌ Error: No se encontró la carpeta www/"
+    exit 1
+fi
+
+# 3. Pull de cambios
 echo "📥 Obteniendo cambios de GitHub..."
 git pull origin $BRANCH
 
-# 3. Copiar contenido de www/ a la raíz
+# 4. Copiar contenido de www/ a la raíz
 echo "📂 Sincronizando carpeta www con la raíz..."
+rm -rf ./* 2>/dev/null
 cp -r www/* .
+cp -r www/.* . 2>/dev/null
 
-# 4. Permisos
+# 5. Permisos
 echo "🔐 Ajustando permisos..."
 chmod -R 755 .
 if [ -d "uploads" ]; then
     chmod -R 777 uploads/
 fi
 
-# 5. Limpieza
+# 6. Limpieza
 if [ -f "error_log" ]; then
     rm error_log
     touch error_log
@@ -44,3 +52,4 @@ if [ -f "error_log" ]; then
 fi
 
 echo "✅ WebApp actualizada y desplegada en la raíz."
+echo "📍 Accede a: https://elcerritovalle.org/rprtdrs"
