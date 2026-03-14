@@ -2,8 +2,10 @@
 -- Script de插入 datos iniciales - Repartidores
 -- =============================================
 -- Ejecutar en DBeaver después de crear las tablas
+-- Base de datos: elcerrit_rprtdrs
+-- Usuario: elcerrit_rprtdrs
 
-USE logistica_db;
+USE elcerrit_rprtdrs;
 
 -- Insertar Admin (usuario: admin, contraseña: Senseii)
 INSERT INTO usuarios (username, password_hash, email, rol, api_token, activo) 

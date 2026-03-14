@@ -9,9 +9,9 @@ services:
       - "8081:80"
     environment:
       - DB_HOST=db
-      - DB_NAME=logistica_db
-      - DB_USER=user_reparto
-      - DB_PASS=pass_reparto
+      - DB_NAME=elcerrit_rprtdrs
+      - DB_USER=elcerrit_rprtdrs
+      - DB_PASS=elcerrit_rprtdrs
     depends_on:
       - db
     networks:
@@ -22,9 +22,9 @@ services:
     container_name: repartidores-db
     restart: always
     environment:
-      MYSQL_DATABASE: logistica_db
-      MYSQL_USER: user_reparto
-      MYSQL_PASSWORD: pass_reparto
+      MYSQL_DATABASE: elcerrit_rprtdrs
+      MYSQL_USER: elcerrit_rprtdrs
+      MYSQL_PASSWORD: elcerrit_rprtdrs
       MYSQL_ROOT_PASSWORD: root_pass
     ports:
       - "3307:3306"
