@@ -11,7 +11,7 @@ services:
       - DB_HOST=db
       - DB_NAME=elcerrit_rprtdrs
       - DB_USER=elcerrit_rprtdrs
-      - DB_PASS=elcerrit_rprtdrs
+      - DB_PASS=hq[(kH$A}i@?
     depends_on:
       - db
     networks:
@@ -24,8 +24,8 @@ services:
     environment:
       MYSQL_DATABASE: elcerrit_rprtdrs
       MYSQL_USER: elcerrit_rprtdrs
-      MYSQL_PASSWORD: elcerrit_rprtdrs
-      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_PASSWORD: hq[(kH$A}i@?
+      MYSQL_ROOT_PASSWORD: hq[(kH$A}i@?
     ports:
       - "3307:3306"
     volumes:
