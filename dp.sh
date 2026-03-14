@@ -25,6 +25,10 @@ fi
 # 2. Verificar que existe la carpeta www
 if [ ! -d "www" ]; then
     echo "❌ Error: No se encontró la carpeta www/"
+    echo "📋 Contenido actual:"
+    ls -la
+    echo "📋 Archivos en git:"
+    git ls-tree -r HEAD --name-only | grep "^www" | head -10
     exit 1
 fi
 
