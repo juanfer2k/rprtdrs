@@ -14,7 +14,7 @@
 
 <div class="login-card">
     <div class="text-center mb-4">
-        <h2>🚀 Logística</h2>
+        <h2>🚀 Repartidores</h2>
         <p class="text-muted">Ingresa a tu panel de control</p>
     </div>
     

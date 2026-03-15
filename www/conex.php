@@ -1,10 +1,10 @@
 <?php
 // --- Archivo: www/conex.php (CONFIGURACIÓN DINÁMICA) ---
 
-$host = getenv('DB_HOST') ?: "localhost";
+$host = getenv('DB_HOST') ?: "192.99.84.34";
 $db   = getenv('DB_NAME') ?: "elcerrit_rprtdrs";
 $user = getenv('DB_USER') ?: "elcerrit_rprtdrs";
-$pass = getenv('DB_PASS') ?: "hq[(kH$A}i@?";
+$pass = getenv('DB_PASS') ?: ']EzCPlz+I%i4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=utf8";
 $options = [
