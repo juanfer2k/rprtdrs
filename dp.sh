@@ -22,34 +22,32 @@ if [ ! -d ".git" ]; then
     cd $DEPLOY_DIR
 fi
 
-# 2. Verificar que existe la carpeta www
-if [ ! -d "www" ]; then
-    echo "❌ Error: No se encontró la carpeta www/"
-    echo "📋 Contenido actual:"
-    ls -la
-    echo "📋 Archivos en git:"
-    git ls-tree -r HEAD --name-only | grep "^www" | head -10
-    exit 1
-fi
-
 # 3. Pull de cambios
 echo "📥 Obteniendo cambios de GitHub..."
 git pull origin $BRANCH
 
-# 4. Copiar contenido de www/ a la raíz
+# 4. Verificar que existe la carpeta www DESPUÉS del pull
+if [ ! -d "www" ]; then
+    echo "❌ Error: No se encontró la carpeta www/"
+    echo "📋 Contenido actual:"
+    ls -la
+    exit 1
+fi
+
+# 5. Copiar contenido de www/ a la raíz
 echo "📂 Sincronizando carpeta www con la raíz..."
 rm -rf ./* 2>/dev/null
 cp -r www/* .
 cp -r www/.* . 2>/dev/null
 
-# 5. Permisos
+# 6. Permisos
 echo "🔐 Ajustando permisos..."
 chmod -R 755 .
 if [ -d "uploads" ]; then
     chmod -R 777 uploads/
 fi
 
-# 6. Limpieza
+# 7. Limpieza
 if [ -f "error_log" ]; then
     rm error_log
     touch error_log
