@@ -5,15 +5,23 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Allow-Headers: Content-Type");
 
-require_once '../conex.php';
+require_once __DIR__ . '/../../conex-switch.php';
 
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
-$username = $data['username'] ?? '';
-$password = $data['password'] ?? '';
+if (!is_array($data)) {
+    $data = [];
+}
 
-if (!$username || !$password) {
+if (empty($data) && !empty($_POST)) {
+    $data = $_POST;
+}
+
+$username = trim((string)($data['username'] ?? ''));
+$password = (string)($data['password'] ?? '');
+
+if ($username === '' || $password === '') {
     http_response_code(400);
     echo json_encode(["status" => "error", "message" => "Usuario y contraseña requeridos"]);
     exit;

@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-require_once '../conex.php';
+require_once '../conex-switch.php';
 
 function getRequestHeadersSafe() {
     if (function_exists('apache_request_headers')) {

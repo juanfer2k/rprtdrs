@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <title>Panel Repartidor</title>
@@ -13,6 +13,9 @@
 <header class="app-header">
     <img src="assets/imgs/logo.png" alt="Logo" class="logo">
     <h1>Panel del Repartidor</h1>
+    <button id="theme-toggle" type="button" style="margin-left:auto; border:1px solid #cbd5e1; background:transparent; color:inherit; border-radius:999px; padding:6px 12px; cursor:pointer;">
+        🌙 Oscuro
+    </button>
 </header>
 
 <div id="map"></div>
@@ -50,6 +53,29 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
+        const themeToggleBtn = document.getElementById('theme-toggle');
+
+        function renderThemeButton(mode) {
+            themeToggleBtn.textContent = mode === 'light' ? '☀️ Claro' : '🌙 Oscuro';
+        }
+
+        function applyTheme(theme) {
+            const mode = theme === 'light' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', mode);
+            localStorage.setItem('theme', mode);
+            renderThemeButton(mode);
+        }
+
+        (function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            applyTheme(savedTheme);
+        })();
+
+        themeToggleBtn.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-bs-theme') || 'dark';
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        });
+
         // --- CONFIGURACIÓN ---
         const FALLBACK_NATIVE_BASE_URL = 'https://elcerritovalle.org/rprtdrs/';
 

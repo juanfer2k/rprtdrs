@@ -13,13 +13,9 @@
 <header class="app-header">
     <img src="assets/imgs/logo.png" alt="Logo" class="logo">
     <h1>Panel del Repartidor</h1>
-    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
-        <label for="theme-select" style="font-size:0.9rem;">Tema</label>
-        <select id="theme-select" style="border-radius:6px; border:1px solid #cbd5e1; padding:4px 8px;">
-            <option value="dark">🌙 Oscuro</option>
-            <option value="light">☀️ Claro</option>
-        </select>
-    </div>
+    <button id="theme-toggle" type="button" style="margin-left:auto; border:1px solid #cbd5e1; background:transparent; color:inherit; border-radius:999px; padding:6px 12px; cursor:pointer;">
+        🌙 Oscuro
+    </button>
 </header>
 
 <div id="map"></div>
@@ -36,6 +32,19 @@
                     <h4 id="profile-name">Cargando sesión...</h4>
                     <span id="profile-id">Espere por favor</span>
                 </div>
+            </div>
+
+            <div style="margin-top:10px; display:grid; gap:8px;">
+                <label style="font-weight:600;">Cambiar foto de perfil</label>
+                <input id="profile-photo-input" type="file" accept="image/png,image/jpeg,image/webp">
+                <button id="btn-upload-photo" type="button">Guardar Foto</button>
+            </div>
+
+            <div style="margin-top:12px; display:grid; gap:8px;">
+                <label style="font-weight:600;">Cambiar contraseña</label>
+                <input id="current-password" type="password" placeholder="Contraseña actual">
+                <input id="new-password" type="password" placeholder="Nueva contraseña (mín. 8)">
+                <button id="btn-change-password" type="button">Actualizar Contraseña</button>
             </div>
         </div>
 
@@ -57,12 +66,17 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
+        const themeToggleBtn = document.getElementById('theme-toggle');
+
+        function renderThemeButton(mode) {
+            themeToggleBtn.textContent = mode === 'light' ? '☀️ Claro' : '🌙 Oscuro';
+        }
+
         function applyTheme(theme) {
             const mode = theme === 'light' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-bs-theme', mode);
             localStorage.setItem('theme', mode);
-            const select = document.getElementById('theme-select');
-            if (select) select.value = mode;
+            renderThemeButton(mode);
         }
 
         (function initTheme() {
@@ -70,8 +84,9 @@
             applyTheme(savedTheme);
         })();
 
-        document.getElementById('theme-select').addEventListener('change', (e) => {
-            applyTheme(e.target.value);
+        themeToggleBtn.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-bs-theme') || 'dark';
+            applyTheme(current === 'dark' ? 'light' : 'dark');
         });
 
         // --- CONFIGURACIÓN ---
@@ -111,6 +126,7 @@
         const toastContainer = document.getElementById('toast-container');
         const profileName = document.getElementById('profile-name');
         const profileIdTag = document.getElementById('profile-id');
+        const profilePic = document.getElementById('profile-pic');
 
         const map = L.map('map', { zoomControl: false }).setView([4.60971, -74.08175], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OSM' }).addTo(map);
@@ -239,6 +255,71 @@
         document.getElementById('compass-toggle').addEventListener('click', () => {
             map.setZoom(18);
             showToast("Zoom de precisión activado", "🧭");
+        });
+
+        async function updateProfile({ file = null, currentPassword = '', newPassword = '' }) {
+            if (!apiToken) {
+                showToast("Debes iniciar sesión primero", "!");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('token', apiToken);
+
+            if (file) formData.append('foto', file);
+            if (currentPassword || newPassword) {
+                formData.append('current_password', currentPassword);
+                formData.append('new_password', newPassword);
+            }
+
+            try {
+                const response = await fetch(BASE_URL + 'api/update_profile.php', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiToken}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    if (data.foto_url) {
+                        profilePic.src = `${BASE_URL}${data.foto_url}?t=${Date.now()}`;
+                    }
+                    showToast(data.message || "Perfil actualizado", "✓");
+                } else {
+                    showToast(data.message || "No se pudo actualizar", "!");
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Error de conexión al actualizar perfil", "!");
+            }
+        }
+
+        document.getElementById('btn-upload-photo').addEventListener('click', async () => {
+            const input = document.getElementById('profile-photo-input');
+            const file = input.files && input.files[0] ? input.files[0] : null;
+            if (!file) {
+                showToast("Selecciona una imagen primero", "!");
+                return;
+            }
+            await updateProfile({ file });
+            input.value = '';
+        });
+
+        document.getElementById('btn-change-password').addEventListener('click', async () => {
+            const currentPassword = document.getElementById('current-password').value.trim();
+            const newPassword = document.getElementById('new-password').value.trim();
+
+            if (!currentPassword || !newPassword) {
+                showToast("Completa contraseña actual y nueva", "!");
+                return;
+            }
+
+            await updateProfile({ currentPassword, newPassword });
+
+            document.getElementById('current-password').value = '';
+            document.getElementById('new-password').value = '';
         });
     });
 </script>

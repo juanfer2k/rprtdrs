@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-require_once '../conex.php';
+require_once __DIR__ . '/../../conex-switch.php';
 
 function getRequestHeadersSafe() {
     if (function_exists('apache_request_headers')) {
@@ -33,6 +33,10 @@ $data = json_decode($json, true);
 
 if (!is_array($data)) {
     $data = [];
+}
+
+if (empty($data) && !empty($_POST)) {
+    $data = $_POST;
 }
 
 $headers = getRequestHeadersSafe();

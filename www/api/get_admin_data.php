@@ -3,7 +3,7 @@
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
 
-require_once '../conex.php';
+require_once __DIR__ . '/../../conex-switch.php';
 
 try {
     // 1. Obtener todos los repartidores
