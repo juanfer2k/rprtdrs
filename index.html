@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -17,13 +17,63 @@
         .btn-admin:hover { background: #388E3C; }
         .btn-app { background: #FF9800; }
         .btn-app:hover { background: #F57C00; }
+
+        .theme-switcher {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid #d1d5db;
+        }
+
+        .theme-select {
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            padding: 4px 8px;
+        }
+
+        [data-bs-theme="dark"] body { background: #0f172a; color: #e2e8f0; }
+        [data-bs-theme="dark"] h1 { color: #e2e8f0; }
+        [data-bs-theme="dark"] .theme-switcher { background: rgba(30, 41, 59, 0.9); border-color: #334155; color: #e2e8f0; }
+        [data-bs-theme="dark"] .theme-select { background: #0f172a; color: #e2e8f0; border-color: #475569; }
     </style>
 </head>
 <body>
+    <div class="theme-switcher">
+        <label for="theme-select">Tema</label>
+        <select id="theme-select" class="theme-select">
+            <option value="dark">🌙 Oscuro</option>
+            <option value="light">☀️ Claro</option>
+        </select>
+    </div>
+
     <div class="container">
         <h1>📦 Sistema de Repartidores</h1>
         <a href="admin.php" class="btn btn-admin">🖥️ Panel de Administración</a>
         <a href="repartidor.html" class="btn btn-app">🚚 App Repartidor</a>
     </div>
+
+    <script>
+        function applyTheme(theme) {
+            const mode = theme === 'light' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', mode);
+            localStorage.setItem('theme', mode);
+            document.getElementById('theme-select').value = mode;
+        }
+
+        (function initTheme() {
+            const saved = localStorage.getItem('theme') || 'dark';
+            applyTheme(saved);
+        })();
+
+        document.getElementById('theme-select').addEventListener('change', (e) => {
+            applyTheme(e.target.value);
+        });
+    </script>
 </body>
 </html>

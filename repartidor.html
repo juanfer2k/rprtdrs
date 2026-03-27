@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <title>Panel Repartidor</title>
@@ -13,6 +13,13 @@
 <header class="app-header">
     <img src="assets/imgs/logo.png" alt="Logo" class="logo">
     <h1>Panel del Repartidor</h1>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+        <label for="theme-select" style="font-size:0.9rem;">Tema</label>
+        <select id="theme-select" style="border-radius:6px; border:1px solid #cbd5e1; padding:4px 8px;">
+            <option value="dark">🌙 Oscuro</option>
+            <option value="light">☀️ Claro</option>
+        </select>
+    </div>
 </header>
 
 <div id="map"></div>
@@ -50,6 +57,23 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
+        function applyTheme(theme) {
+            const mode = theme === 'light' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', mode);
+            localStorage.setItem('theme', mode);
+            const select = document.getElementById('theme-select');
+            if (select) select.value = mode;
+        }
+
+        (function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            applyTheme(savedTheme);
+        })();
+
+        document.getElementById('theme-select').addEventListener('change', (e) => {
+            applyTheme(e.target.value);
+        });
+
         // --- CONFIGURACIÓN ---
         const FALLBACK_NATIVE_BASE_URL = 'https://elcerritovalle.org/rprtdrs/';
 

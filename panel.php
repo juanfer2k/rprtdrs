@@ -2,7 +2,7 @@
 // --- Archivo: www/panel.php (VERSIÓN CORREGIDA CON CDN Y SEGURIDAD) ---
 ?>
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,18 +19,42 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <style>
-        body { 
-            background-color: #f4f7f6; 
+        body {
+            background-color: var(--bs-body-bg);
+            color: var(--bs-body-color);
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
-        #map { height: 600px; width: 100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 2px solid #fff; }
-        .sidebar { height: 100vh; overflow-y: auto; background: white; border-right: 1px solid #eee; padding: 20px; }
-        .order-card { cursor: pointer; transition: 0.2s; border-left: 5px solid #0d6efd; margin-bottom: 12px; border-radius: 8px; }
+
+        #map {
+            height: 600px;
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 2px solid var(--bs-border-color);
+        }
+
+        .sidebar {
+            height: 100vh;
+            overflow-y: auto;
+            background: var(--bs-body-bg);
+            border-right: 1px solid var(--bs-border-color);
+            padding: 20px;
+        }
+
+        .order-card {
+            cursor: pointer;
+            transition: 0.2s;
+            border-left: 5px solid #0d6efd;
+            margin-bottom: 12px;
+            border-radius: 8px;
+        }
+
         .order-card:hover { transform: translateX(5px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         .driver-row { cursor: pointer; transition: 0.2s; }
-        .driver-row:hover { background-color: #f0f7ff !important; }
-        .navbar { background: #fff; border-bottom: 1px solid #eee; margin-bottom: 20px; }
+        .driver-row:hover { background-color: rgba(13, 110, 253, 0.12) !important; }
+        .navbar { background: var(--bs-body-bg); border-bottom: 1px solid var(--bs-border-color); margin-bottom: 20px; }
         .search-box { margin-bottom: 20px; }
+        .theme-select { min-width: 130px; }
     </style>
 </head>
 <body>
@@ -39,6 +63,19 @@
     if (!localStorage.getItem('admin_token')) {
         window.location.href = 'login.php';
     }
+
+    function applyTheme(theme) {
+        const mode = theme === 'light' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-bs-theme', mode);
+        localStorage.setItem('theme', mode);
+        const select = document.getElementById('theme-select');
+        if (select) select.value = mode;
+    }
+
+    (function initTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        applyTheme(savedTheme);
+    })();
 </script>
 
 <div class="container-fluid">
@@ -46,7 +83,7 @@
         <!-- Sidebar -->
         <div class="col-md-3 sidebar">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="m-0">📦 Logística</h4>
+                <h4 class="m-0">📦 Repartidores</h4>
                 <button class="btn btn-outline-danger btn-sm" onclick="logout()">Salir</button>
             </div>
             
@@ -79,9 +116,13 @@
         <div class="col-md-9 p-4">
             <nav class="navbar navbar-expand-lg px-3 rounded shadow-sm">
                 <span class="navbar-brand mb-0 h1">🛰️ Monitor de Repartidores</span>
-                <div class="ms-auto">
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    <select id="theme-select" class="form-select form-select-sm theme-select" onchange="applyTheme(this.value)">
+                        <option value="dark">🌙 Oscuro</option>
+                        <option value="light">☀️ Claro</option>
+                    </select>
                     <span id="status-tag" class="badge bg-success">Conectado</span>
-                    <button class="btn btn-primary btn-sm ms-3" onclick="fetchData()">🔄 Refrescar</button>
+                    <button class="btn btn-primary btn-sm" onclick="fetchData()">🔄 Refrescar</button>
                 </div>
             </nav>
             
