@@ -4,7 +4,7 @@ $host = "127.0.0.1";
 $port = "3306";
 $db   = "elcerrit_rprtdrs";
 $user = "root";
-$pass = ""; // En XAMPP por defecto root no tiene contraseña
+$pass = "";
 
 // --- NO MODIFICAR DEBAJO DE ESTA LÍNEA ---
 $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8";
@@ -19,7 +19,7 @@ try {
 } catch (PDOException $e) {
     http_response_code(500);
     error_log("Error de conexión LOCAL (XAMPP): " . $e->getMessage());
-    echo json_encode(["status" => "error", "message" => "Error de conexión a la base de datos local (XAMPP). Revisa www/conex.local.php."]);
+    echo json_encode(["status" => "error", "message" => "Error de conexión a la base de datos local (XAMPP). Revisa conex.local.php."]);
     exit;
 }
 ?>
