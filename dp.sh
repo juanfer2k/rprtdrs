@@ -4,7 +4,7 @@ set -euo pipefail
 # --- Script de Despliegue Automático (dp.sh) ---
 # Copia el contenido de www/ a la raíz de la instancia
 
-# Configuración
+# Configuración.
 DEPLOY_DIR="/home2/elcerrit/elcerritovalle.org/rprtdrs"
 REPO_URL="git@github.com:juanfer2k/rprtdrs.git"
 BRANCH="master"
