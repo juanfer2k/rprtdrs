@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-require_once __DIR__ . '/../../conex-switch.php';
+require_once '../conex-switch.php';
 
 function getRequestHeadersSafe() {
     if (function_exists('apache_request_headers')) {
@@ -33,10 +33,6 @@ $data = json_decode($json, true);
 
 if (!is_array($data)) {
     $data = [];
-}
-
-if (empty($data) && !empty($_POST)) {
-    $data = $_POST;
 }
 
 $headers = getRequestHeadersSafe();
@@ -62,8 +58,8 @@ if (!$token) {
 }
 
 try {
-    // Buscar usuario por token
-    $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE api_token = ?");
+    // Buscar usuario activo por token
+    $stmt = $pdo->prepare("SELECT id, rol FROM usuarios WHERE api_token = ? AND activo = 1 LIMIT 1");
     $stmt->execute([$token]);
     $user = $stmt->fetch();
 
@@ -73,7 +69,22 @@ try {
         exit;
     }
 
-    $id_repartidor = $user['id'];
+    if (($user['rol'] ?? '') !== 'repartidor') {
+        http_response_code(403);
+        echo json_encode(["status" => "error", "message" => "Token no autorizado para seguimiento"]);
+        exit;
+    }
+
+    $id_repartidor = (int)$user['id'];
+
+    $stmtRep = $pdo->prepare("SELECT id_repartidor FROM repartidores WHERE id_repartidor = ? AND activo = 1 LIMIT 1");
+    $stmtRep->execute([$id_repartidor]);
+    if (!$stmtRep->fetch()) {
+        http_response_code(409);
+        echo json_encode(["status" => "error", "message" => "Perfil de repartidor no vinculado o inactivo"]);
+        exit;
+    }
+
     $lat = $data['lat'] ?? $data['latitud'] ?? null;
     $lng = $data['lng'] ?? $data['longitud'] ?? null;
     $estado = $data['estado'] ?? null;
