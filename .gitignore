@@ -1,1 +1,31 @@
+# Build artifacts Android
+android/app/build/
+android/.gradle/
+android/build/
+
+# Herramientas / IDEs
 .blackboxcli/
+.idea/
+*.Zone.Identifier
+
+# Archivos generados en servidor
+error_log
+debug_log.txt
+www/error_log
+www/debug_log.txt
+
+# Carpeta de subidas (se gestiona en el servidor, no en git)
+# Solo ignoramos el contenido, no el .gitkeep
+uploads/*
+www/uploads/*
+!www/uploads/.gitkeep
+
+# Archivos locales de desarrollo
+conex.local.php
+www/conex.local.php
+
+# Archivos temporales / junk
+project_structure.txt
+project_contents.txt
+rprtdrs/
+*.zip

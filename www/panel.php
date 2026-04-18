@@ -79,9 +79,10 @@
         <div class="col-md-9 p-4">
             <nav class="navbar navbar-expand-lg px-3 rounded shadow-sm">
                 <span class="navbar-brand mb-0 h1">🛰️ Monitor de Repartidores</span>
-                <div class="ms-auto">
+                <div class="ms-auto d-flex align-items-center gap-2">
                     <span id="status-tag" class="badge bg-success">Conectado</span>
-                    <button class="btn btn-primary btn-sm ms-3" onclick="fetchData()">🔄 Refrescar</button>
+                    <a href="admin.php" class="btn btn-outline-secondary btn-sm">⚙️ Gestionar</a>
+                    <button class="btn btn-primary btn-sm" onclick="fetchData()">🔄 Refrescar</button>
                 </div>
             </nav>
             
