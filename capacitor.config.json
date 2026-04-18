@@ -1,0 +1,10 @@
+{
+  "appId": "org.elcerrito.rprtdrs",
+  "appName": "Repartidores",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://elcerritovalle.org/rprtdrs/",
+    "cleartext": false
+  }
+}

@@ -1,0 +1,162 @@
+🚀 Iniciando actualización en el servidor...
+📍 Directorio: /home2/elcerrit/elcerritovalle.org/rprtdrs
+📥 Obteniendo cambios de GitHub...
+⚠️ Se detectaron cambios locales. Guardando en stash...
+Saved working directory and index state WIP on master: 8f1ac55 .4
+Warning: Identity file /home2/elcerrit/.ssh/gemini_CLI_rprtdrs not accessible: No such file or directory.
+Load key "/home2/elcerrit/.ssh": Is a directory
+Enter passphrase for key '/home2/elcerrit/.ssh/deploy_rda':
+From github.com:juanfer2k/rprtdrs
+ * branch            master     -> FETCH_HEAD
+Already up to date.
+📥 Restaurando cambios locales desde stash...
+On branch master
+Your branch is up to date with 'origin/master'.
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+        deleted:    .gitignore
+        deleted:    BLACKBOX.md
+        deleted:    ESTRUCTURA.md
+        deleted:    README.md
+        deleted:    android/app/src/main/assets/public/actualizar.php
+        deleted:    android/app/src/main/assets/public/actualizar_estado.php
+        deleted:    android/app/src/main/assets/public/admin.php
+        deleted:    android/app/src/main/assets/public/api/get_admin_data.php
+        deleted:    android/app/src/main/assets/public/api/login.php
+        deleted:    android/app/src/main/assets/public/api/track.php
+        deleted:    android/app/src/main/assets/public/assets/android-chrome-192x192.png
+        deleted:    android/app/src/main/assets/public/assets/android-chrome-512x512.png
+        deleted:    android/app/src/main/assets/public/assets/apple-touch-icon.png
+        deleted:    android/app/src/main/assets/public/assets/favicon-16x16.png
+        deleted:    android/app/src/main/assets/public/assets/favicon-32x32.png
+        deleted:    android/app/src/main/assets/public/assets/favicon.ico
+        deleted:    android/app/src/main/assets/public/assets/icon/android-chrome-192x192.png
+        deleted:    android/app/src/main/assets/public/assets/icon/android-chrome-512x512.png
+        deleted:    android/app/src/main/assets/public/assets/icon/apple-touch-icon.png
+        deleted:    android/app/src/main/assets/public/assets/icon/favicon-16x16.png
+        deleted:    android/app/src/main/assets/public/assets/icon/favicon-32x32.png
+        deleted:    android/app/src/main/assets/public/assets/icon/favicon.ico
+        deleted:    android/app/src/main/assets/public/assets/icon/site.webmanifest
+        deleted:    android/app/src/main/assets/public/assets/imgs/location.png
+        deleted:    android/app/src/main/assets/public/assets/imgs/logo.png
+        deleted:    android/app/src/main/assets/public/assets/site.webmanifest
+        deleted:    android/app/src/main/assets/public/check_db.php
+        deleted:    android/app/src/main/assets/public/conex.local.php
+        deleted:    android/app/src/main/assets/public/conex.php
+        deleted:    android/app/src/main/assets/public/crear_perfil.php
+        deleted:    android/app/src/main/assets/public/gestionar_repartidores.php
+        deleted:    android/app/src/main/assets/public/get_repartidores.php
+        deleted:    android/app/src/main/assets/public/index.html
+        deleted:    android/app/src/main/assets/public/index.php
+        deleted:    android/app/src/main/assets/public/js/app.js
+        deleted:    android/app/src/main/assets/public/js/capacitor-welcome.js
+        deleted:    android/app/src/main/assets/public/leaflet.css
+        deleted:    android/app/src/main/assets/public/leaflet.js
+        deleted:    android/app/src/main/assets/public/login.php
+        deleted:    android/app/src/main/assets/public/manage_apk.php
+        deleted:    android/app/src/main/assets/public/manifest.json
+        deleted:    android/app/src/main/assets/public/obtener_ubicaciones.php
+        deleted:    android/app/src/main/assets/public/panel.php
+        deleted:    android/app/src/main/assets/public/repartidor.html
+        deleted:    android/app/src/main/assets/public/style.css
+        deleted:    blackbox-cli-v2-linux-x64-v1.2.48-cb478e3e.zip
+        deleted:    capacitor.config.json
+        deleted:    cleanup_duplicates.ps1
+        modified:   dp.sh
+        deleted:    httpd.conf
+        modified:   index.html
+        deleted:    sync_android_assets.ps1
+        modified:   uploads/perfil_user_1_1774641142.jpg
+        modified:   uploads/perfil_user_1_1774644507.jpg
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        actualizar.php
+        actualizar_estado.php
+        admin.php
+        api/
+        assets/
+        check_db.php
+        crear_perfil.php
+        gestionar_repartidores.php
+        get_repartidores.php
+        index.php
+        js/
+        leaflet.css
+        leaflet.js
+        login.php
+        manage_apk.php
+        manifest.json
+        obtener_ubicaciones.php
+        panel.php
+        repartidor.html
+        style.css
+        uploads/actualizar.php
+        "uploads/actualizar.php\357\200\272Zone.Identifier"
+        uploads/actualizar_estado.php
+        uploads/admin.php
+        uploads/api/
+        uploads/assets/
+        uploads/check_db.php
+        uploads/conex.local.php
+        uploads/conex.php
+        uploads/crear_perfil.php
+        uploads/debug_log.txt
+        uploads/error_log
+        uploads/gestionar_repartidores.php
+        uploads/get_repartidores.php
+        uploads/index.html
+        uploads/index.php
+        uploads/js/
+        uploads/leaflet.css
+        uploads/leaflet.js
+        "uploads/leaflet.js\357\200\272Zone.Identifier"
+        uploads/login.php
+        uploads/manage_apk.php
+        uploads/manifest.json
+        "uploads/manifest.json\357\200\272Zone.Identifier"
+        uploads/obtener_ubicaciones.php
+        "uploads/obtener_ubicaciones.php\357\200\272Zone.Identifier"
+        uploads/panel.php
+        uploads/repartidor.html
+        uploads/style.css
+
+no changes added to commit (use "git add" and/or "git commit -a")
+Dropped refs/stash@{0} (43e674e7bc73d54ddcf04ce072b07c782a1c4a34)
+📂 Preparando archivos para despliegue...
+📁 Carpeta www/ encontrada en repositorio
+📂 Sincronizando www/ con la raíz...
+sending incremental file list
+cannot delete non-empty directory: android/app/src/main/assets/public
+cannot delete non-empty directory: android/app/src/main/assets/public
+cannot delete non-empty directory: android/app/src/main/assets
+cannot delete non-empty directory: android/app/src/main/assets
+cannot delete non-empty directory: android/app/src/main
+cannot delete non-empty directory: android/app/src/main
+cannot delete non-empty directory: android/app/src
+cannot delete non-empty directory: android/app/src
+cannot delete non-empty directory: android/app/build/intermediates/assets/debug/mergeDebugAssets/public
+cannot delete non-empty directory: android/app/build/intermediates/assets/debug/mergeDebugAssets/public
+cannot delete non-empty directory: android/app/build/intermediates/assets/debug/mergeDebugAssets
+cannot delete non-empty directory: android/app/build/intermediates/assets/debug/mergeDebugAssets
+cannot delete non-empty directory: android/app/build/intermediates/assets/debug
+cannot delete non-empty directory: android/app/build/intermediates/assets/debug
+cannot delete non-empty directory: android/app/build/intermediates/assets
+cannot delete non-empty directory: android/app/build/intermediates/assets
+cannot delete non-empty directory: android/app/build/intermediates
+cannot delete non-empty directory: android/app/build/intermediates
+cannot delete non-empty directory: android/app/build
+cannot delete non-empty directory: android/app/build
+cannot delete non-empty directory: android/app
+cannot delete non-empty directory: android/app
+cannot delete non-empty directory: android
+./
+index.html
+
+sent 2,810 bytes  received 1,702 bytes  9,024.00 bytes/sec
+total size is 431,712  speedup is 95.68
+🔐 Ajustando permisos...
+✅ WebApp actualizada y desplegada en la raíz.
+📍 Accede a: https://elcerritovalle.org/rprtdrs
