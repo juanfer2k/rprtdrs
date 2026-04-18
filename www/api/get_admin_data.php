@@ -3,7 +3,7 @@
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
 
-require_once '../conex.php';
+require_once '../conex-switch.php';
 
 try {
     // Repartidores: nombre desde usuarios, ubicación desde repartidores con fallback a usuarios

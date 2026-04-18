@@ -6,7 +6,7 @@ header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit(0); }
 
-require_once '../conex.php';
+require_once '../conex-switch.php';
 
 // ── Autenticación: solo admins ────────────────────────────────────────────────
 function requireAdmin($pdo) {

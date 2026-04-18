@@ -40,7 +40,14 @@ rsync -av --delete --ignore-errors \
     --exclude='debug_log.txt' \
     --exclude='uploads' \
     --exclude='conex.local.php' \
+    --exclude='conex.php' \
     www/ .
+
+# ── Proteger conex.php (no sobreescribir si ya existe en el servidor) ─────────
+if [ ! -f "conex.php" ]; then
+    echo "⚠️  conex.php no existe — copiando plantilla desde www/. Edita las credenciales vía FTP."
+    cp www/conex.php conex.php 2>/dev/null || true
+fi
 
 # ── Permisos ─────────────────────────────────────────────────────────────────
 echo "🔐 Ajustando permisos..."
