@@ -77,17 +77,36 @@ try {
 
     $id_repartidor = (int)$user['id'];
 
+    // Buscar el id_repartidor correcto: primero por ID directo, luego por username
+    // (cubre el caso donde usuarios.id != repartidores.id_repartidor en datos legacy)
     $stmtRep = $pdo->prepare("SELECT id_repartidor FROM repartidores WHERE id_repartidor = ? AND activo = 1 LIMIT 1");
     $stmtRep->execute([$id_repartidor]);
-    if (!$stmtRep->fetch()) {
+    $rep = $stmtRep->fetch();
+
+    if (!$rep) {
+        // Fallback: buscar por username en join
+        $stmtFb = $pdo->prepare("
+            SELECT r.id_repartidor FROM repartidores r
+            JOIN usuarios u ON u.username = (SELECT username FROM usuarios WHERE id = ? LIMIT 1)
+            WHERE r.activo = 1
+            ORDER BY ABS(r.id_repartidor - ?) ASC
+            LIMIT 1
+        ");
+        $stmtFb->execute([$id_repartidor, $id_repartidor]);
+        $rep = $stmtFb->fetch();
+    }
+
+    if (!$rep) {
         http_response_code(409);
-        echo json_encode(["status" => "error", "message" => "Perfil de repartidor no vinculado o inactivo"]);
+        echo json_encode(["status" => "error", "message" => "Perfil no encontrado. Pide al admin que verifique tu cuenta."]);
         exit;
     }
 
-    $lat = $data['lat'] ?? $data['latitud'] ?? null;
-    $lng = $data['lng'] ?? $data['longitud'] ?? null;
-    $estado = $data['estado'] ?? null;
+    $id_repartidor = (int)$rep['id_repartidor'];
+
+    $lat    = isset($data['lat'])     ? $data['lat']     : (isset($data['latitud'])   ? $data['latitud']   : null);
+    $lng    = isset($data['lng'])     ? $data['lng']     : (isset($data['longitud'])  ? $data['longitud']  : null);
+    $estado = isset($data['estado']) ? $data['estado']  : null;
 
     if ($lat === null || $lng === null) {
         http_response_code(400);
