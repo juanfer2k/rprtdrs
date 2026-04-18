@@ -176,6 +176,49 @@
     </div>
 </div>
 
+<!-- ── Modal: editar perfil completo ─────────────────────────────────────── -->
+<div class="modal fade" id="modalEdit" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="form-edit" novalidate>
+                <div class="modal-header">
+                    <h5 class="modal-title">✏️ Editar Repartidor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit-uid">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre completo</label>
+                        <input type="text" class="form-control" id="edit-nombre">
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label">Usuario (login)</label>
+                            <input type="text" class="form-control" id="edit-username" autocomplete="off">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Teléfono</label>
+                            <input type="tel" class="form-control" id="edit-telefono">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="edit-email">
+                    </div>
+                    <div id="edit-error" class="alert alert-danger mt-3 d-none"></div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                    </div>
+                    <button type="button" class="btn btn-outline-warning btn-sm" id="btn-cambiar-pwd-desde-edit">🔑 Cambiar contraseña</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- ── Modal: cambiar contraseña ─────────────────────────────────────────── -->
 <div class="modal fade" id="modalPwd" tabindex="-1">
     <div class="modal-dialog modal-sm">
@@ -286,9 +329,10 @@
                             onchange="toggleActivo(${r.id_repartidor}, ${r.uid || 0}, this)">
                     </div>
                 </td>
-                <td>
-                    <button class="btn btn-outline-secondary btn-sm" onclick="abrirCambioPwd(${r.id_repartidor}, ${r.uid || 0})" title="Cambiar contraseña">🔑</button>
-                    <button class="btn btn-outline-danger btn-sm ms-1" onclick="eliminarRepartidor(${r.id_repartidor}, ${r.uid || 0}, '${esc(r.nombre_completo)}')" title="Eliminar">🗑</button>
+                <td class="text-nowrap">
+                    <button class="btn btn-outline-primary btn-sm"    onclick="abrirEdit(${r.uid})"                                            title="Editar perfil">✏️</button>
+                    <button class="btn btn-outline-secondary btn-sm ms-1" onclick="abrirCambioPwd(${r.uid}, ${r.uid})"                         title="Cambiar contraseña">🔑</button>
+                    <button class="btn btn-outline-danger btn-sm ms-1"    onclick="eliminarRepartidor(${r.uid}, ${r.uid}, '${esc(r.nombre_completo)}')" title="Eliminar">🗑</button>
                 </td>
             </tr>
         `).join('');
@@ -361,6 +405,52 @@
         } finally {
             btn.disabled = false; btn.textContent = 'Crear';
         }
+    });
+
+    // ── Editar perfil ─────────────────────────────────────────────────────────
+    window.abrirEdit = (uid) => {
+        const r = allRows.find(x => x.uid == uid);
+        if (!r) return;
+        document.getElementById('edit-uid').value      = uid;
+        document.getElementById('edit-nombre').value   = r.nombre_completo || '';
+        document.getElementById('edit-username').value = r.username || '';
+        document.getElementById('edit-telefono').value = r.telefono || '';
+        document.getElementById('edit-email').value    = r.email || '';
+        document.getElementById('edit-error').classList.add('d-none');
+        new bootstrap.Modal(document.getElementById('modalEdit')).show();
+    };
+
+    document.getElementById('form-edit').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('edit-error');
+        errEl.classList.add('d-none');
+        const uid = parseInt(document.getElementById('edit-uid').value);
+        try {
+            const res = await fetch('api/admin_repartidores.php?action=update_user', {
+                method: 'POST', headers: apiHeaders(),
+                body: JSON.stringify({
+                    uid,
+                    nombre_completo: document.getElementById('edit-nombre').value.trim(),
+                    username:        document.getElementById('edit-username').value.trim(),
+                    telefono:        document.getElementById('edit-telefono').value.trim(),
+                    email:           document.getElementById('edit-email').value.trim(),
+                })
+            });
+            const data = await res.json();
+            if (data.status !== 'success') throw new Error(data.message);
+            bootstrap.Modal.getInstance(document.getElementById('modalEdit')).hide();
+            toast('Perfil actualizado');
+            cargarRepartidores();
+        } catch (err) {
+            errEl.textContent = err.message;
+            errEl.classList.remove('d-none');
+        }
+    });
+
+    document.getElementById('btn-cambiar-pwd-desde-edit').addEventListener('click', () => {
+        const uid = parseInt(document.getElementById('edit-uid').value);
+        bootstrap.Modal.getInstance(document.getElementById('modalEdit')).hide();
+        setTimeout(() => abrirCambioPwd(uid, uid), 300);
     });
 
     // ── Toggle activo ─────────────────────────────────────────────────────────

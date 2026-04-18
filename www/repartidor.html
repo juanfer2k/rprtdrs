@@ -50,6 +50,19 @@
         .perfil-msg { font-size: .8rem; margin-top: 10px; padding: 6px 10px; border-radius: 6px; }
         .perfil-msg.ok  { background: #16a34a22; color: #4ade80; }
         .perfil-msg.err { background: #dc262622; color: #f87171; }
+        /* ── Pedidos ── */
+        #pedidos-section { margin-top: 12px; }
+        #pedidos-section h3 { font-size: .9rem; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; margin-bottom: 8px; }
+        .pedido-card { background: #1e2130; border-radius: 10px; padding: 12px; margin-bottom: 8px; border-left: 4px solid #3b82f6; }
+        .pedido-card.entregado { border-color: #16a34a; opacity: .6; }
+        .pedido-card .pedido-cliente { font-weight: 600; font-size: .9rem; }
+        .pedido-card .pedido-dir { font-size: .8rem; color: #9ca3af; margin: 2px 0 8px; }
+        .pedido-card .pedido-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .pedido-card button { font-size: .75rem; padding: 4px 10px; border-radius: 6px; border: none; cursor: pointer; }
+        .btn-en-camino  { background: #f59e0b; color: #000; }
+        .btn-entregado  { background: #16a34a; color: #fff; }
+        .btn-cancelado  { background: #6b7280; color: #fff; }
+        #pedidos-empty  { font-size: .85rem; color: #6b7280; text-align: center; padding: 12px 0; }
         .perfil-section-title {
             font-size: .75rem; text-transform: uppercase; letter-spacing: .06em;
             color: #6b7280; margin: 20px 0 8px; border-top: 1px solid #2e3347; padding-top: 14px;
@@ -102,6 +115,11 @@
             <button id="status-delivered">En camino a entrega</button>
             <button id="status-order-delivered" class="order-delivered-btn">✓ Pedido Entregado</button>
             <button id="get-location">Actualizar Mi Ubicación</button>
+
+            <div id="pedidos-section">
+                <h3>📦 Mis Pedidos</h3>
+                <div id="pedidos-list"><p id="pedidos-empty">Sin pedidos asignados</p></div>
+            </div>
         </div>
     </div>
 </div>
@@ -374,6 +392,63 @@ document.addEventListener('DOMContentLoaded', function () {
         el.style.display = 'block';
         if (ok) setTimeout(function(){ el.style.display='none'; }, 3000);
     }
+
+    // ── Pedidos ───────────────────────────────────────────────────────────────
+    var PEDIDOS_URL = BASE_URL + 'api/pedidos.php';
+
+    function cargarPedidos() {
+        fetch(PEDIDOS_URL + '?action=mis_pedidos', { headers: headers() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status !== 'success') return;
+                renderPedidos(d.pedidos);
+            })
+            .catch(function() {});
+    }
+
+    function renderPedidos(pedidos) {
+        var container = document.getElementById('pedidos-list');
+        if (!pedidos || !pedidos.length) {
+            container.innerHTML = '<p id="pedidos-empty">Sin pedidos asignados</p>';
+            return;
+        }
+        container.innerHTML = pedidos.map(function(p) {
+            var esEntregado = p.estado === 'entregado';
+            var badgeColor  = { 'pendiente':'#f59e0b', 'en camino':'#3b82f6', 'entregado':'#16a34a', 'cancelado':'#6b7280' }[p.estado] || '#6b7280';
+            return '<div class="pedido-card' + (esEntregado ? ' entregado' : '') + '">' +
+                '<div class="pedido-cliente">#' + p.id_pedido + ' ' + esc(p.cliente_nombre) +
+                '  <span style="font-size:.7rem;padding:2px 7px;border-radius:99px;background:' + badgeColor + ';color:#fff">' + p.estado + '</span></div>' +
+                '<div class="pedido-dir">📍 ' + esc(p.direccion_entrega) + '</div>' +
+                (esEntregado ? '' :
+                '<div class="pedido-btns">' +
+                    (p.estado !== 'en camino' ? '<button class="btn-en-camino" onclick="actualizarPedido(' + p.id_pedido + ',\'en camino\')">🚚 En camino</button>' : '') +
+                    '<button class="btn-entregado" onclick="actualizarPedido(' + p.id_pedido + ',\'entregado\')">✓ Entregado</button>' +
+                    '<button class="btn-cancelado" onclick="actualizarPedido(' + p.id_pedido + ',\'cancelado\')">✕ Cancelar</button>' +
+                '</div>') +
+            '</div>';
+        }).join('');
+    }
+
+    function esc(str) {
+        return str == null ? '' : String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    window.actualizarPedido = function(id_pedido, estado) {
+        fetch(PEDIDOS_URL + '?action=update_estado', {
+            method: 'POST', headers: headers(),
+            body: JSON.stringify({ id_pedido: id_pedido, estado: estado })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.status === 'success') { cargarPedidos(); toast('Pedido actualizado', '✓'); }
+            else toast(d.message || 'Error', '!');
+        })
+        .catch(function() { toast('Error de conexión', '!'); });
+    };
+
+    // Cargar pedidos al inicio y cada 30s
+    setTimeout(cargarPedidos, 1500);
+    setInterval(cargarPedidos, 30000);
 
     window.logout = function() {
         localStorage.removeItem('api_token');

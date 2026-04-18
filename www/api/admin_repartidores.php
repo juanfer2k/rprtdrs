@@ -40,16 +40,23 @@ switch ($action) {
     // ── Listar ────────────────────────────────────────────────────────────────
     case 'list':
         $rows = $pdo->query("
-            SELECT id, id AS uid, username,
-                   COALESCE(nombre_completo, username) AS nombre_completo,
-                   telefono, email, estado, activo, ultima_actualizacion,
-                   latitud, longitud, foto_url
+            SELECT
+                id                                      AS uid,
+                id                                      AS id_repartidor,
+                username,
+                COALESCE(nombre_completo, username)     AS nombre_completo,
+                COALESCE(telefono, '')                  AS telefono,
+                COALESCE(email, '')                     AS email,
+                COALESCE(estado, 'No disponible')       AS estado,
+                activo,
+                ultima_actualizacion,
+                latitud,
+                longitud,
+                COALESCE(foto_url, '')                  AS foto_url
             FROM usuarios
             WHERE rol = 'repartidor'
             ORDER BY id
         ")->fetchAll();
-        // Alias para compatibilidad con frontend
-        foreach ($rows as &$r) { $r['id_repartidor'] = $r['id']; }
         jsonOk(array('repartidores' => $rows));
 
     // ── Crear ─────────────────────────────────────────────────────────────────
@@ -81,6 +88,24 @@ switch ($action) {
             if ($e->getCode() === '23000') jsonErr("El usuario '$username' ya existe");
             jsonErr('Error al crear: ' . $e->getMessage(), 500);
         }
+
+    // ── Editar perfil completo ────────────────────────────────────────────────
+    case 'update_user':
+        $uid      = (int)(isset($body['uid']) ? $body['uid'] : 0);
+        $nombre   = trim(isset($body['nombre_completo']) ? $body['nombre_completo'] : '') ?: null;
+        $username = trim(isset($body['username'])        ? $body['username']        : '');
+        $telefono = trim(isset($body['telefono'])        ? $body['telefono']        : '') ?: null;
+        $email    = trim(isset($body['email'])           ? $body['email']           : '') ?: null;
+        if (!$uid) jsonErr('uid requerido');
+        // Verificar que el username no lo use otro
+        if ($username) {
+            $chk = $pdo->prepare("SELECT id FROM usuarios WHERE username = ? AND id != ? LIMIT 1");
+            $chk->execute(array($username, $uid));
+            if ($chk->fetch()) jsonErr("El usuario '$username' ya está en uso");
+        }
+        $pdo->prepare("UPDATE usuarios SET nombre_completo=?, telefono=?, email=?, username=COALESCE(NULLIF(?,''), username) WHERE id=? AND rol='repartidor'")
+            ->execute(array($nombre, $telefono, $email, $username, $uid));
+        jsonOk();
 
     // ── Toggle activo ─────────────────────────────────────────────────────────
     case 'toggle':
