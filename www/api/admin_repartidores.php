@@ -59,19 +59,23 @@ switch ($action) {
 
     // ── Listar ────────────────────────────────────────────────────────────────
     case 'list':
-        // uid = id real en tabla usuarios (puede diferir de id_repartidor en datos legacy)
+        // INNER JOIN garantiza que solo se muestran repartidores con cuenta de usuario
+        // uid = usuarios.id (fuente de verdad para operaciones de auth)
         $rows = $pdo->query("
-            SELECT r.id_repartidor,
-                   COALESCE(u.nombre_completo, r.nombre_completo) AS nombre_completo,
-                   r.telefono, r.email, r.estado, r.activo, r.ultima_actualizacion,
-                   u.username,
-                   u.id AS uid
-            FROM repartidores r
-            LEFT JOIN usuarios u ON u.id = r.id_repartidor
-               OR (u.username = r.nombre_completo AND u.rol = 'repartidor')
-            WHERE r.activo IS NOT NULL
-            GROUP BY r.id_repartidor
-            ORDER BY r.id_repartidor
+            SELECT
+                r.id_repartidor,
+                u.id            AS uid,
+                u.username,
+                COALESCE(u.nombre_completo, r.nombre_completo, u.username) AS nombre_completo,
+                COALESCE(r.telefono, u.telefono)   AS telefono,
+                COALESCE(r.email,    u.email)       AS email,
+                COALESCE(r.estado,   u.estado)      AS estado,
+                r.activo,
+                r.ultima_actualizacion
+            FROM usuarios u
+            INNER JOIN repartidores r ON r.id_repartidor = u.id
+            WHERE u.rol = 'repartidor'
+            ORDER BY u.id
         ")->fetchAll();
         jsonOk(array('repartidores' => $rows));
 

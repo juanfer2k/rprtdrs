@@ -27,6 +27,11 @@
         .card { background: var(--card-bg); border-color: var(--border); color: var(--text); }
         .card-header { background: var(--card-bg) !important; border-color: var(--border); }
         .table th { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+        .table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        .table th.sortable:hover { color: var(--text); }
+        .sort-icon { margin-left: 4px; opacity: .4; font-style: normal; }
+        .table th.asc  .sort-icon { opacity: 1; content: '↑'; }
+        .table th.desc .sort-icon { opacity: 1; }
         [data-theme="dark"] .table { --bs-table-color: var(--text); --bs-table-bg: transparent; }
         [data-theme="dark"] .table-light { --bs-table-bg: #252a3a; --bs-table-color: var(--text); }
         [data-theme="dark"] .table-hover > tbody > tr:hover > * { --bs-table-bg-state: rgba(255,255,255,.05); }
@@ -81,12 +86,12 @@
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th class="ps-3">ID</th>
-                                    <th>Nombre</th>
-                                    <th>Usuario</th>
-                                    <th>Teléfono</th>
-                                    <th>Estado</th>
-                                    <th>Activo</th>
+                                    <th class="ps-3 sortable" data-col="id_repartidor">ID <em class="sort-icon">↕</em></th>
+                                    <th class="sortable" data-col="nombre_completo">Nombre <em class="sort-icon">↕</em></th>
+                                    <th class="sortable" data-col="username">Usuario <em class="sort-icon">↕</em></th>
+                                    <th class="sortable" data-col="telefono">Teléfono <em class="sort-icon">↕</em></th>
+                                    <th class="sortable" data-col="estado">Estado <em class="sort-icon">↕</em></th>
+                                    <th class="sortable" data-col="activo">Activo <em class="sort-icon">↕</em></th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -228,55 +233,97 @@
         setTimeout(() => el.remove(), 3500);
     }
 
+    // ── Estado de sort ────────────────────────────────────────────────────────
+    let allRows = [];
+    let sortCol = 'id_repartidor';
+    let sortDir = 'asc';
+
     // ── Cargar tabla ──────────────────────────────────────────────────────────
     async function cargarRepartidores() {
         try {
             const res = await fetch('api/admin_repartidores.php?action=list', { headers: apiHeaders() });
-            if (res.status === 401 || res.status === 403) {
-                window.location.href = 'login.php';
-                return;
-            }
+            if (res.status === 401 || res.status === 403) { window.location.href = 'login.php'; return; }
             const data = await res.json();
             if (data.status !== 'success') throw new Error(data.message);
-
-            const rows = data.repartidores;
-            document.getElementById('stat-total').textContent = rows.length;
-            document.getElementById('stat-activos').textContent = rows.filter(r => r.activo == 1).length;
-            document.getElementById('stat-disponibles').textContent = rows.filter(r => r.estado === 'Disponible').length;
-
-            const tbody = document.getElementById('tabla-repartidores');
-            if (!rows.length) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4" style="color:var(--muted)">Sin repartidores registrados.</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = rows.map(r => `
-                <tr>
-                    <td class="ps-3" style="color:var(--muted)">#${r.id_repartidor}</td>
-                    <td><strong>${esc(r.nombre_completo)}</strong></td>
-                    <td style="color:var(--muted)">${esc(r.username) || '<em style="opacity:.5">sin usuario</em>'}</td>
-                    <td>${esc(r.telefono) || '—'}</td>
-                    <td><span class="badge status-badge ${estadoBadge(r.estado)}">${esc(r.estado)}</span></td>
-                    <td>
-                        <div class="form-check form-switch mb-0">
-                            <input class="form-check-input" type="checkbox" role="switch"
-                                ${r.activo == 1 ? 'checked' : ''}
-                                onchange="toggleActivo(${r.id_repartidor}, ${r.uid || 0}, this)">
-                        </div>
-                    </td>
-                    <td>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="abrirCambioPwd(${r.id_repartidor}, ${r.uid || 0})" title="Cambiar contraseña">🔑</button>
-                        <button class="btn btn-outline-danger btn-sm ms-1" onclick="eliminarRepartidor(${r.id_repartidor}, ${r.uid || 0}, '${esc(r.nombre_completo)}')" title="Eliminar">🗑</button>
-                    </td>
-                </tr>
-            `).join('');
-        } catch (e) {
-            console.error(e);
-        }
+            allRows = data.repartidores;
+            renderTabla();
+        } catch (e) { console.error(e); }
     }
 
+    function renderTabla() {
+        const rows = [...allRows].sort((a, b) => {
+            let va = a[sortCol] ?? '';
+            let vb = b[sortCol] ?? '';
+            if (sortCol === 'id_repartidor' || sortCol === 'activo') {
+                va = Number(va); vb = Number(vb);
+            } else {
+                va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
+            }
+            return sortDir === 'asc' ? (va > vb ? 1 : va < vb ? -1 : 0)
+                                     : (va < vb ? 1 : va > vb ? -1 : 0);
+        });
+
+        document.getElementById('stat-total').textContent = rows.length;
+        document.getElementById('stat-activos').textContent = rows.filter(r => r.activo == 1).length;
+        document.getElementById('stat-disponibles').textContent = rows.filter(r => r.estado === 'Disponible').length;
+
+        const tbody = document.getElementById('tabla-repartidores');
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4" style="color:var(--muted)">Sin repartidores registrados.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(r => `
+            <tr>
+                <td class="ps-3" style="color:var(--muted)">#${r.uid || r.id_repartidor}</td>
+                <td><strong>${esc(r.nombre_completo)}</strong></td>
+                <td style="color:var(--muted)">${r.username ? esc(r.username) : '<em style="opacity:.4">sin usuario</em>'}</td>
+                <td>${esc(r.telefono) || '—'}</td>
+                <td><span class="badge status-badge ${estadoBadge(r.estado)}">${esc(r.estado)}</span></td>
+                <td>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                            ${r.activo == 1 ? 'checked' : ''}
+                            onchange="toggleActivo(${r.id_repartidor}, ${r.uid || 0}, this)">
+                    </div>
+                </td>
+                <td>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="abrirCambioPwd(${r.id_repartidor}, ${r.uid || 0})" title="Cambiar contraseña">🔑</button>
+                    <button class="btn btn-outline-danger btn-sm ms-1" onclick="eliminarRepartidor(${r.id_repartidor}, ${r.uid || 0}, '${esc(r.nombre_completo)}')" title="Eliminar">🗑</button>
+                </td>
+            </tr>
+        `).join('');
+
+        // Actualizar íconos de sort en headers
+        document.querySelectorAll('th.sortable').forEach(th => {
+            const icon = th.querySelector('.sort-icon');
+            th.classList.remove('asc','desc');
+            if (th.dataset.col === sortCol) {
+                th.classList.add(sortDir);
+                icon.textContent = sortDir === 'asc' ? '↑' : '↓';
+            } else {
+                icon.textContent = '↕';
+            }
+        });
+    }
+
+    // Listeners de sort
+    document.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+            if (sortCol === th.dataset.col) {
+                sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortCol = th.dataset.col;
+                sortDir = 'asc';
+            }
+            renderTabla();
+        });
+    });
+
     function estadoBadge(estado) {
-        return { 'Disponible':'bg-success', 'No disponible':'bg-secondary', 'En camino a recoger':'bg-warning text-dark', 'En camino a entrega':'bg-info text-dark', 'Pedido Entregado':'bg-primary' }[estado] ?? 'bg-light text-dark';
+        const m = { 'Disponible':'bg-success', 'No disponible':'bg-secondary',
+                    'En camino a recoger':'bg-warning text-dark',
+                    'En camino a entrega':'bg-info text-dark', 'Pedido Entregado':'bg-primary' };
+        return m[estado] || 'bg-light text-dark';
     }
 
     function esc(str) {
