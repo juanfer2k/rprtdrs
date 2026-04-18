@@ -48,6 +48,9 @@ rsync -a --delete --ignore-errors \
 
 echo "✅ Archivos sincronizados."
 
+# ── 5b. Eliminar www/ del destino (no debe ser accesible como URL) ────────────
+rm -rf "$DEPLOY_DIR/www" && echo "🗑  www/ eliminado del destino." || true
+
 # ── 5. Restaurar conex.php ────────────────────────────────────────────────────
 if [ -f "$CONEX_BAK" ]; then
     cp "$CONEX_BAK" "$CONEX_SRC"
