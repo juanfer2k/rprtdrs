@@ -1,70 +1,72 @@
 #!/bin/bash
 set -euo pipefail
 
-# Script de Despliegue — sincroniza www/ al directorio raíz del servidor web
+# ── Configuración ─────────────────────────────────────────────────────────────
 DEPLOY_DIR="/home2/elcerrit/elcerritovalle.org/rprtdrs"
 REPO_URL="git@github.com:tiparamedicceo/rprtdrs.git"
 BRANCH="master"
+TMP_DIR="/tmp/rprtdrs_deploy_$$"
 
-echo "🚀 Iniciando actualización en el servidor..."
-echo "📍 Directorio: $DEPLOY_DIR"
+echo "🚀 Iniciando despliegue..."
+echo "📍 Destino : $DEPLOY_DIR"
+echo "🔗 Repo    : $REPO_URL  (rama: $BRANCH)"
 
-cd "$DEPLOY_DIR" 2>/dev/null || { echo "❌ Directorio no encontrado: $DEPLOY_DIR"; exit 1; }
-
-# ── Clonar si no es un repositorio git ──────────────────────────────────────
-if [ ! -d ".git" ]; then
-    echo "📦 Clonando repositorio..."
-    BACKUP_NAME="../rprtdrs_backup_$(date +%s)"
-    [ "$(ls -A .)" ] && mv "$DEPLOY_DIR" "$BACKUP_NAME" && mkdir -p "$DEPLOY_DIR" && cd "$DEPLOY_DIR"
-    git clone -b "$BRANCH" "$REPO_URL" .
-    echo "✅ Clonado en rama $BRANCH."
+# ── 1. Preservar conex.php ────────────────────────────────────────────────────
+CONEX_SRC="$DEPLOY_DIR/conex.php"
+CONEX_BAK="/tmp/conex_rprtdrs_$(whoami).php"
+if [ -f "$CONEX_SRC" ]; then
+    cp "$CONEX_SRC" "$CONEX_BAK"
+    echo "💾 conex.php guardado en $CONEX_BAK"
+else
+    echo "⚠️  conex.php no encontrado en $DEPLOY_DIR — recuerda subirlo por FTP después."
 fi
 
-# ── Preservar conex.php antes de cualquier operación git ────────────────────
-CONEX_BACKUP="/tmp/conex_rprtdrs_$(whoami).php"
-[ -f "conex.php" ] && cp conex.php "$CONEX_BACKUP" && echo "💾 conex.php guardado en $CONEX_BACKUP"
+# ── 2. Clonar repo en directorio temporal ────────────────────────────────────
+echo "📥 Clonando rama $BRANCH..."
+rm -rf "$TMP_DIR"
+if ! git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_DIR" 2>&1; then
+    echo "❌ Error al clonar. Verifica la clave SSH y la URL del repositorio."
+    exit 1
+fi
 
-# ── Sincronizar con origin (descarta cambios locales del servidor) ───────────
-echo "📥 Actualizando desde GitHub (rama: $BRANCH)..."
-git fetch origin
-git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH" "origin/$BRANCH"
-git reset --hard "origin/$BRANCH"
-echo "✅ Código actualizado al último commit."
+COMMIT=$(git -C "$TMP_DIR" log --oneline -1)
+echo "✅ Commit: $COMMIT"
 
-# ── Restaurar conex.php (git checkout puede haberlo borrado) ────────────────
-if [ -f "$CONEX_BACKUP" ]; then
-    cp "$CONEX_BACKUP" conex.php
+# ── 3. Crear destino si no existe ─────────────────────────────────────────────
+mkdir -p "$DEPLOY_DIR"
+
+# ── 4. Rsync www/ → destino ──────────────────────────────────────────────────
+echo "📂 Sincronizando archivos..."
+rsync -a --delete --ignore-errors \
+    --exclude='.git' \
+    --exclude='conex.php' \
+    --exclude='conex.local.php' \
+    --exclude='uploads' \
+    --exclude='error_log' \
+    --exclude='debug_log.txt' \
+    "$TMP_DIR/www/" "$DEPLOY_DIR/"
+
+echo "✅ Archivos sincronizados."
+
+# ── 5. Restaurar conex.php ────────────────────────────────────────────────────
+if [ -f "$CONEX_BAK" ]; then
+    cp "$CONEX_BAK" "$CONEX_SRC"
     echo "✅ conex.php restaurado."
 fi
 
-# ── Sincronizar www/ a la raíz ───────────────────────────────────────────────
-echo "📂 Sincronizando www/ con la raíz..."
-rsync -av --delete --ignore-errors \
-    --exclude='.git' \
-    --exclude='www' \
-    --exclude='android' \
-    --exclude='rprtdrs' \
-    --exclude='dp.sh' \
-    --exclude='CLAUDE.md' \
-    --exclude='error_log' \
-    --exclude='debug_log.txt' \
-    --exclude='uploads' \
-    --exclude='conex.local.php' \
-    --exclude='conex.php' \
-    www/ .
+# ── 6. Asegurar carpeta uploads ───────────────────────────────────────────────
+mkdir -p "$DEPLOY_DIR/uploads"
 
-# ── Proteger conex.php (no sobreescribir si ya existe en el servidor) ─────────
-if [ ! -f "conex.php" ]; then
-    echo "⚠️  conex.php no existe — copiando plantilla desde www/. Edita las credenciales vía FTP."
-    cp www/conex.php conex.php 2>/dev/null || true
-fi
-
-# ── Permisos ─────────────────────────────────────────────────────────────────
+# ── 7. Permisos ───────────────────────────────────────────────────────────────
 echo "🔐 Ajustando permisos..."
-find . -maxdepth 4 -not -path './.git/*' -type d -exec chmod 755 {} \;
-find . -maxdepth 4 -not -path './.git/*' -type f -exec chmod 644 {} \; 2>/dev/null || true
-[ -d "uploads" ] && chmod -R 755 uploads/ && chmod -R u+w uploads/
-[ -f "error_log" ] && chmod 666 error_log
+find "$DEPLOY_DIR" -maxdepth 4 -not -path '*/.git/*' -type d -exec chmod 755 {} \; 2>/dev/null || true
+find "$DEPLOY_DIR" -maxdepth 4 -not -path '*/.git/*' -type f -exec chmod 644 {} \; 2>/dev/null || true
+chmod -R u+w "$DEPLOY_DIR/uploads/" 2>/dev/null || true
+[ -f "$DEPLOY_DIR/error_log" ] && chmod 666 "$DEPLOY_DIR/error_log" || true
 
+# ── 8. Limpiar temp ───────────────────────────────────────────────────────────
+rm -rf "$TMP_DIR"
+
+echo ""
 echo "✅ Despliegue completado."
 echo "📍 https://elcerritovalle.org/rprtdrs"
