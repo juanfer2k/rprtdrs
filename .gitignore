@@ -27,5 +27,30 @@ www/conex.local.php
 # Archivos temporales / junk
 project_structure.txt
 project_contents.txt
+dp-fallo.txt
 rprtdrs/
 *.zip
+
+# conex.php vive en el servidor (FTP), no en git
+conex.php
+www/conex.php
+
+# Archivos de root que no deben volver (duplicados eliminados)
+actualizar.php
+actualizar_estado.php
+admin.php
+check_db.php
+conex-switch.php
+crear_perfil.php
+gestionar_repartidores.php
+get_repartidores.php
+index.php
+leaflet.css
+leaflet.js
+login.php
+manage_apk.php
+manifest.json
+obtener_ubicaciones.php
+panel.php
+repartidor.html
+style.css

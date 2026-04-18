@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Script de Despliegue — sincroniza www/ al directorio raíz del servidor web
 DEPLOY_DIR="/home2/elcerrit/elcerritovalle.org/rprtdrs"
-REPO_URL="git@github.com:juanfer2k/rprtdrs.git"
+REPO_URL="git@github.com:tiparamedicceo/rprtdrs.git"
 BRANCH="main"
 
 echo "🚀 Iniciando actualización en el servidor..."
