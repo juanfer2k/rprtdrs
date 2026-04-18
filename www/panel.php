@@ -237,19 +237,34 @@
 
     // ── Datos ─────────────────────────────────────────────────────────────────
     async function fetchData() {
+        const tag = document.getElementById('status-tag');
         try {
             const res = await fetch('api/get_admin_data.php');
-            const data = await res.json();
+            const text = await res.text();
+            let data;
+            try { data = JSON.parse(text); } catch (_) {
+                tag.className = 'badge bg-danger';
+                tag.title = text.substring(0, 200);
+                tag.textContent = 'Error PHP';
+                return;
+            }
             if (data.status === 'success') {
                 lastData = data;
                 filterData();
                 renderMap(data.repartidores);
-                document.getElementById('status-tag').className = 'badge bg-success';
-                document.getElementById('status-tag').textContent = 'Conectado';
+                tag.className = 'badge bg-success';
+                tag.textContent = 'Conectado';
+                tag.title = '';
+            } else {
+                tag.className = 'badge bg-danger';
+                tag.textContent = 'Error BD';
+                tag.title = data.message || '';
+                console.error('get_admin_data error:', data.message);
             }
         } catch (e) {
-            document.getElementById('status-tag').className = 'badge bg-danger';
-            document.getElementById('status-tag').textContent = 'Sin conexión';
+            tag.className = 'badge bg-danger';
+            tag.textContent = 'Sin conexión';
+            tag.title = e.message;
         }
     }
 
