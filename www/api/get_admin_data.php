@@ -5,7 +5,7 @@ header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
 
 try {
-    require_once '../conex-switch.php';
+    require_once __DIR__ . '/../conex-switch.php';
 
     $repartidores = $pdo->query("
         SELECT

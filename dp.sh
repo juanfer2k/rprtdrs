@@ -20,12 +20,22 @@ if [ ! -d ".git" ]; then
     echo "✅ Clonado en rama $BRANCH."
 fi
 
+# ── Preservar conex.php antes de cualquier operación git ────────────────────
+CONEX_BACKUP="/tmp/conex_rprtdrs_$(whoami).php"
+[ -f "conex.php" ] && cp conex.php "$CONEX_BACKUP" && echo "💾 conex.php guardado en $CONEX_BACKUP"
+
 # ── Sincronizar con origin (descarta cambios locales del servidor) ───────────
 echo "📥 Actualizando desde GitHub (rama: $BRANCH)..."
 git fetch origin
 git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH" "origin/$BRANCH"
 git reset --hard "origin/$BRANCH"
 echo "✅ Código actualizado al último commit."
+
+# ── Restaurar conex.php (git checkout puede haberlo borrado) ────────────────
+if [ -f "$CONEX_BACKUP" ]; then
+    cp "$CONEX_BACKUP" conex.php
+    echo "✅ conex.php restaurado."
+fi
 
 # ── Sincronizar www/ a la raíz ───────────────────────────────────────────────
 echo "📂 Sincronizando www/ con la raíz..."
