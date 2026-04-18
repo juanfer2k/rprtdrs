@@ -182,6 +182,7 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="pwd-id">
+                    <input type="hidden" id="pwd-uid">
                     <label class="form-label">Nueva contraseña</label>
                     <input type="password" class="form-control" id="pwd-nueva" required>
                     <div id="pwd-error" class="alert alert-danger mt-2 d-none"></div>
@@ -253,19 +254,19 @@
                 <tr>
                     <td class="ps-3" style="color:var(--muted)">#${r.id_repartidor}</td>
                     <td><strong>${esc(r.nombre_completo)}</strong></td>
-                    <td style="color:var(--muted)">${esc(r.username)}</td>
-                    <td>${esc(r.telefono ?? '—')}</td>
+                    <td style="color:var(--muted)">${esc(r.username) || '<em style="opacity:.5">sin usuario</em>'}</td>
+                    <td>${esc(r.telefono) || '—'}</td>
                     <td><span class="badge status-badge ${estadoBadge(r.estado)}">${esc(r.estado)}</span></td>
                     <td>
                         <div class="form-check form-switch mb-0">
                             <input class="form-check-input" type="checkbox" role="switch"
                                 ${r.activo == 1 ? 'checked' : ''}
-                                onchange="toggleActivo(${r.id_repartidor}, this)">
+                                onchange="toggleActivo(${r.id_repartidor}, ${r.uid || 0}, this)">
                         </div>
                     </td>
                     <td>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="abrirCambioPwd(${r.id_repartidor})" title="Cambiar contraseña">🔑</button>
-                        <button class="btn btn-outline-danger btn-sm ms-1" onclick="eliminarRepartidor(${r.id_repartidor}, '${esc(r.nombre_completo)}')" title="Eliminar">🗑</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="abrirCambioPwd(${r.id_repartidor}, ${r.uid || 0})" title="Cambiar contraseña">🔑</button>
+                        <button class="btn btn-outline-danger btn-sm ms-1" onclick="eliminarRepartidor(${r.id_repartidor}, ${r.uid || 0}, '${esc(r.nombre_completo)}')" title="Eliminar">🗑</button>
                     </td>
                 </tr>
             `).join('');
@@ -316,12 +317,12 @@
     });
 
     // ── Toggle activo ─────────────────────────────────────────────────────────
-    window.toggleActivo = async (id, cb) => {
+    window.toggleActivo = async (id, uid, cb) => {
         const activo = cb.checked ? 1 : 0;
         try {
             const res = await fetch('api/admin_repartidores.php?action=toggle', {
                 method: 'POST', headers: apiHeaders(),
-                body: JSON.stringify({ id_repartidor: id, activo })
+                body: JSON.stringify({ id_repartidor: id, uid: uid, activo })
             });
             const data = await res.json();
             if (data.status !== 'success') throw new Error(data.message);
@@ -333,8 +334,9 @@
     };
 
     // ── Cambiar pwd ───────────────────────────────────────────────────────────
-    window.abrirCambioPwd = (id) => {
+    window.abrirCambioPwd = (id, uid) => {
         document.getElementById('pwd-id').value = id;
+        document.getElementById('pwd-uid').value = uid;
         document.getElementById('pwd-nueva').value = '';
         document.getElementById('pwd-error').classList.add('d-none');
         new bootstrap.Modal(document.getElementById('modalPwd')).show();
@@ -349,7 +351,8 @@
                 method: 'POST', headers: apiHeaders(),
                 body: JSON.stringify({
                     id_repartidor: parseInt(document.getElementById('pwd-id').value),
-                    password: document.getElementById('pwd-nueva').value
+                    uid:           parseInt(document.getElementById('pwd-uid').value),
+                    password:      document.getElementById('pwd-nueva').value
                 })
             });
             const data = await res.json();
@@ -363,12 +366,12 @@
     });
 
     // ── Eliminar ──────────────────────────────────────────────────────────────
-    window.eliminarRepartidor = async (id, nombre) => {
+    window.eliminarRepartidor = async (id, uid, nombre) => {
         if (!confirm(`¿Eliminar a "${nombre}"? Esta acción no se puede deshacer.`)) return;
         try {
             const res = await fetch('api/admin_repartidores.php?action=delete', {
                 method: 'POST', headers: apiHeaders(),
-                body: JSON.stringify({ id_repartidor: id })
+                body: JSON.stringify({ id_repartidor: id, uid: uid })
             });
             const data = await res.json();
             if (data.status !== 'success') throw new Error(data.message);

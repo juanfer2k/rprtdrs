@@ -59,13 +59,19 @@ switch ($action) {
 
     // ── Listar ────────────────────────────────────────────────────────────────
     case 'list':
+        // uid = id real en tabla usuarios (puede diferir de id_repartidor en datos legacy)
         $rows = $pdo->query("
-            SELECT r.id_repartidor, r.nombre_completo, r.telefono, r.email,
-                   r.estado, r.activo, r.ultima_actualizacion,
-                   u.username
+            SELECT r.id_repartidor,
+                   COALESCE(u.nombre_completo, r.nombre_completo) AS nombre_completo,
+                   r.telefono, r.email, r.estado, r.activo, r.ultima_actualizacion,
+                   u.username,
+                   u.id AS uid
             FROM repartidores r
             LEFT JOIN usuarios u ON u.id = r.id_repartidor
-            ORDER BY r.nombre_completo
+               OR (u.username = r.nombre_completo AND u.rol = 'repartidor')
+            WHERE r.activo IS NOT NULL
+            GROUP BY r.id_repartidor
+            ORDER BY r.id_repartidor
         ")->fetchAll();
         jsonOk(array('repartidores' => $rows));
 
@@ -117,38 +123,74 @@ switch ($action) {
 
     // ── Toggle activo ─────────────────────────────────────────────────────────
     case 'toggle':
-        $id     = (int)(isset($body['id_repartidor']) ? $body['id_repartidor'] : 0);
+        $id_rep = (int)(isset($body['id_repartidor']) ? $body['id_repartidor'] : 0);
+        $uid    = (int)(isset($body['uid'])           ? $body['uid']           : 0);
         $activo = (int)(isset($body['activo'])        ? $body['activo']        : 0);
-        if (!$id) jsonErr('id_repartidor requerido');
+        if (!$id_rep) jsonErr('id_repartidor requerido');
 
         $pdo->beginTransaction();
-        $pdo->prepare("UPDATE repartidores SET activo = ? WHERE id_repartidor = ?")->execute(array($activo, $id));
-        $pdo->prepare("UPDATE usuarios SET activo = ? WHERE id = ?")->execute(array($activo, $id));
+        $pdo->prepare("UPDATE repartidores SET activo = ? WHERE id_repartidor = ?")->execute(array($activo, $id_rep));
+        if ($uid) {
+            $pdo->prepare("UPDATE usuarios SET activo = ? WHERE id = ?")->execute(array($activo, $uid));
+        } else {
+            // Fallback: actualizar por nombre_completo = username
+            $pdo->prepare("UPDATE usuarios u JOIN repartidores r ON r.id_repartidor = ?
+                           SET u.activo = ? WHERE u.rol = 'repartidor' AND u.id = r.id_repartidor")
+                ->execute(array($id_rep, $activo));
+        }
         $pdo->commit();
         jsonOk();
 
     // ── Cambiar contraseña ────────────────────────────────────────────────────
     case 'change_password':
-        $id       = (int)(isset($body['id_repartidor']) ? $body['id_repartidor'] : 0);
+        $id_rep   = (int)(isset($body['id_repartidor']) ? $body['id_repartidor'] : 0);
+        $uid      = (int)(isset($body['uid'])           ? $body['uid']           : 0);
         $password = isset($body['password'])            ? $body['password']       : '';
-        if (!$id || !$password) jsonErr('id_repartidor y password requeridos');
+        if (!$id_rep || !$password) jsonErr('id_repartidor y password requeridos');
         if (strlen($password) < 6) jsonErr('La contraseña debe tener al menos 6 caracteres');
 
         $hash = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("UPDATE usuarios SET password_hash = ? WHERE id = ?");
-        $stmt->execute(array($hash, $id));
-        if (!$stmt->rowCount()) jsonErr('Repartidor no encontrado', 404);
+
+        // Intentar con uid directo primero, luego con id_repartidor, luego búsqueda por nombre
+        $updated = 0;
+        if ($uid) {
+            $s = $pdo->prepare("UPDATE usuarios SET password_hash = ? WHERE id = ? AND rol = 'repartidor'");
+            $s->execute(array($hash, $uid));
+            $updated = $s->rowCount();
+        }
+        if (!$updated) {
+            $s = $pdo->prepare("UPDATE usuarios SET password_hash = ? WHERE id = ? AND rol = 'repartidor'");
+            $s->execute(array($hash, $id_rep));
+            $updated = $s->rowCount();
+        }
+        if (!$updated) {
+            // Último recurso: buscar el usuario cuyo username coincide con nombre_completo en repartidores
+            $s = $pdo->prepare("
+                UPDATE usuarios u
+                JOIN repartidores r ON u.username = r.nombre_completo
+                SET u.password_hash = ?
+                WHERE r.id_repartidor = ? AND u.rol = 'repartidor'
+            ");
+            $s->execute(array($hash, $id_rep));
+            $updated = $s->rowCount();
+        }
+        if (!$updated) jsonErr('Usuario no encontrado. Verifica que el repartidor tiene cuenta en la tabla usuarios.');
         jsonOk();
 
     // ── Eliminar ──────────────────────────────────────────────────────────────
     case 'delete':
-        $id = (int)(isset($body['id_repartidor']) ? $body['id_repartidor'] : 0);
-        if (!$id) jsonErr('id_repartidor requerido');
+        $id_rep = (int)(isset($body['id_repartidor']) ? $body['id_repartidor'] : 0);
+        $uid    = (int)(isset($body['uid'])           ? $body['uid']           : 0);
+        if (!$id_rep) jsonErr('id_repartidor requerido');
 
         $pdo->beginTransaction();
-        $pdo->prepare("DELETE FROM posiciones_historial WHERE id_repartidor = ?")->execute(array($id));
-        $pdo->prepare("DELETE FROM usuarios WHERE id = ?")->execute(array($id));
-        $pdo->prepare("DELETE FROM repartidores WHERE id_repartidor = ?")->execute(array($id));
+        $pdo->prepare("DELETE FROM posiciones_historial WHERE id_repartidor = ?")->execute(array($id_rep));
+        if ($uid) {
+            $pdo->prepare("DELETE FROM usuarios WHERE id = ?")->execute(array($uid));
+        } else {
+            $pdo->prepare("DELETE FROM usuarios WHERE id = ? AND rol = 'repartidor'")->execute(array($id_rep));
+        }
+        $pdo->prepare("DELETE FROM repartidores WHERE id_repartidor = ?")->execute(array($id_rep));
         $pdo->commit();
         jsonOk();
 
