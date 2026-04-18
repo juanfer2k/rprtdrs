@@ -6,20 +6,14 @@ header("Access-Control-Allow-Origin: *");
 require_once '../conex-switch.php';
 
 try {
-    // Repartidores: nombre desde usuarios, ubicación desde repartidores con fallback a usuarios
     $repartidores = $pdo->query("
         SELECT
-            r.id_repartidor,
-            COALESCE(u.nombre_completo, u.username, r.nombre_completo) AS nombre_completo,
-            COALESCE(r.latitud,  u.latitud)  AS latitud,
-            COALESCE(r.longitud, u.longitud) AS longitud,
-            COALESCE(r.estado,   u.estado)   AS estado,
-            COALESCE(r.ultima_actualizacion, u.ultima_actualizacion) AS ultima_actualizacion,
-            r.activo
-        FROM repartidores r
-        LEFT JOIN usuarios u ON u.id = r.id_repartidor
-        WHERE r.activo = 1
-        ORDER BY r.id_repartidor
+            id AS id_repartidor,
+            COALESCE(nombre_completo, username) AS nombre_completo,
+            latitud, longitud, estado, ultima_actualizacion, activo
+        FROM usuarios
+        WHERE rol = 'repartidor' AND activo = 1
+        ORDER BY id
     ")->fetchAll();
 
     $pedidos = $pdo->query("

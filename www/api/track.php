@@ -75,38 +75,11 @@ try {
         exit;
     }
 
-    $id_repartidor = (int)$user['id'];
+    $uid = (int)$user['id'];
 
-    // Buscar el id_repartidor correcto: primero por ID directo, luego por username
-    // (cubre el caso donde usuarios.id != repartidores.id_repartidor en datos legacy)
-    $stmtRep = $pdo->prepare("SELECT id_repartidor FROM repartidores WHERE id_repartidor = ? AND activo = 1 LIMIT 1");
-    $stmtRep->execute([$id_repartidor]);
-    $rep = $stmtRep->fetch();
-
-    if (!$rep) {
-        // Fallback: buscar por username en join
-        $stmtFb = $pdo->prepare("
-            SELECT r.id_repartidor FROM repartidores r
-            JOIN usuarios u ON u.username = (SELECT username FROM usuarios WHERE id = ? LIMIT 1)
-            WHERE r.activo = 1
-            ORDER BY ABS(r.id_repartidor - ?) ASC
-            LIMIT 1
-        ");
-        $stmtFb->execute([$id_repartidor, $id_repartidor]);
-        $rep = $stmtFb->fetch();
-    }
-
-    if (!$rep) {
-        http_response_code(409);
-        echo json_encode(["status" => "error", "message" => "Perfil no encontrado. Pide al admin que verifique tu cuenta."]);
-        exit;
-    }
-
-    $id_repartidor = (int)$rep['id_repartidor'];
-
-    $lat    = isset($data['lat'])     ? $data['lat']     : (isset($data['latitud'])   ? $data['latitud']   : null);
-    $lng    = isset($data['lng'])     ? $data['lng']     : (isset($data['longitud'])  ? $data['longitud']  : null);
-    $estado = isset($data['estado']) ? $data['estado']  : null;
+    $lat    = isset($data['lat'])    ? $data['lat']    : (isset($data['latitud'])  ? $data['latitud']  : null);
+    $lng    = isset($data['lng'])    ? $data['lng']    : (isset($data['longitud']) ? $data['longitud'] : null);
+    $estado = isset($data['estado']) ? $data['estado'] : null;
 
     if ($lat === null || $lng === null) {
         http_response_code(400);
@@ -114,27 +87,19 @@ try {
         exit;
     }
 
-    // 1. Actualizar repartidores
-    if ($estado) {
-        $pdo->prepare("UPDATE repartidores SET latitud=?, longitud=?, estado=?, ultima_actualizacion=NOW() WHERE id_repartidor=?")
-            ->execute([$lat, $lng, $estado, $id_repartidor]);
-        // Actualizar también usuarios (tabla origen con ENUM de estado)
-        // Solo actualizar si el estado es un valor válido del ENUM
-        $estadosValidos = ['Disponible','No disponible','En camino a recoger','En camino a entrega','Pedido Entregado','libre','ocupado','desconectado'];
-        if (in_array($estado, $estadosValidos)) {
-            $pdo->prepare("UPDATE usuarios SET latitud=?, longitud=?, estado=?, ultima_actualizacion=NOW() WHERE id=?")
-                ->execute([$lat, $lng, $estado, $user['id']]);
-        }
+    // Actualizar ubicación y estado directamente en usuarios
+    $estadosValidos = ['Disponible','No disponible','En camino a recoger','En camino a entrega','Pedido Entregado','libre','ocupado','desconectado'];
+    if ($estado && in_array($estado, $estadosValidos)) {
+        $pdo->prepare("UPDATE usuarios SET latitud=?, longitud=?, estado=?, ultima_actualizacion=NOW() WHERE id=?")
+            ->execute([$lat, $lng, $estado, $uid]);
     } else {
-        $pdo->prepare("UPDATE repartidores SET latitud=?, longitud=?, ultima_actualizacion=NOW() WHERE id_repartidor=?")
-            ->execute([$lat, $lng, $id_repartidor]);
         $pdo->prepare("UPDATE usuarios SET latitud=?, longitud=?, ultima_actualizacion=NOW() WHERE id=?")
-            ->execute([$lat, $lng, $user['id']]);
+            ->execute([$lat, $lng, $uid]);
     }
 
-    // 2. Historial de posiciones
+    // Historial de posiciones (usa usuarios.id como id_repartidor)
     $pdo->prepare("INSERT INTO posiciones_historial (id_repartidor, latitud, longitud) VALUES (?,?,?)")
-        ->execute([$id_repartidor, $lat, $lng]);
+        ->execute([$uid, $lat, $lng]);
 
     echo json_encode(["status" => "success", "message" => "Sincronizado correctamente"]);
 

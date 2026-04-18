@@ -8,7 +8,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit(0); }
 
 require_once '../conex-switch.php';
 
-// ── Autenticación: solo admins ────────────────────────────────────────────────
 function requireAdmin($pdo) {
     $headers = function_exists('apache_request_headers') ? apache_request_headers() : array();
     foreach ($_SERVER as $k => $v) {
@@ -20,22 +19,11 @@ function requireAdmin($pdo) {
     $auth  = isset($headers['Authorization']) ? $headers['Authorization']
            : (isset($headers['authorization']) ? $headers['authorization'] : '');
     $token = stripos($auth, 'Bearer ') === 0 ? trim(substr($auth, 7)) : trim($auth);
-
-    if (!$token) {
-        http_response_code(401);
-        echo json_encode(array('status' => 'error', 'message' => 'Token requerido'));
-        exit;
-    }
-
-    $stmt = $pdo->prepare("SELECT rol FROM usuarios WHERE api_token = ? AND activo = 1");
+    if (!$token) { http_response_code(401); echo json_encode(array('status'=>'error','message'=>'Token requerido')); exit; }
+    $stmt = $pdo->prepare("SELECT rol FROM usuarios WHERE api_token = ? AND activo = 1 LIMIT 1");
     $stmt->execute(array($token));
     $user = $stmt->fetch();
-
-    if (!$user || $user['rol'] !== 'admin') {
-        http_response_code(403);
-        echo json_encode(array('status' => 'error', 'message' => 'Acceso denegado'));
-        exit;
-    }
+    if (!$user || $user['rol'] !== 'admin') { http_response_code(403); echo json_encode(array('status'=>'error','message'=>'Acceso denegado')); exit; }
 }
 
 requireAdmin($pdo);
@@ -44,39 +32,24 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 $body   = json_decode(file_get_contents('php://input'), true);
 if (!is_array($body)) $body = array();
 
-function jsonOk($data = array()) {
-    echo json_encode(array_merge(array('status' => 'success'), $data));
-    exit;
-}
-
-function jsonErr($msg, $code = 400) {
-    http_response_code($code);
-    echo json_encode(array('status' => 'error', 'message' => $msg));
-    exit;
-}
+function jsonOk($data = array()) { echo json_encode(array_merge(array('status'=>'success'), $data)); exit; }
+function jsonErr($msg, $code = 400) { http_response_code($code); echo json_encode(array('status'=>'error','message'=>$msg)); exit; }
 
 switch ($action) {
 
     // ── Listar ────────────────────────────────────────────────────────────────
     case 'list':
-        // INNER JOIN garantiza que solo se muestran repartidores con cuenta de usuario
-        // uid = usuarios.id (fuente de verdad para operaciones de auth)
         $rows = $pdo->query("
-            SELECT
-                r.id_repartidor,
-                u.id            AS uid,
-                u.username,
-                COALESCE(u.nombre_completo, r.nombre_completo, u.username) AS nombre_completo,
-                COALESCE(r.telefono, u.telefono)   AS telefono,
-                COALESCE(r.email,    u.email)       AS email,
-                COALESCE(r.estado,   u.estado)      AS estado,
-                r.activo,
-                r.ultima_actualizacion
-            FROM usuarios u
-            INNER JOIN repartidores r ON r.id_repartidor = u.id
-            WHERE u.rol = 'repartidor'
-            ORDER BY u.id
+            SELECT id, id AS uid, username,
+                   COALESCE(nombre_completo, username) AS nombre_completo,
+                   telefono, email, estado, activo, ultima_actualizacion,
+                   latitud, longitud, foto_url
+            FROM usuarios
+            WHERE rol = 'repartidor'
+            ORDER BY id
         ")->fetchAll();
+        // Alias para compatibilidad con frontend
+        foreach ($rows as &$r) { $r['id_repartidor'] = $r['id']; }
         jsonOk(array('repartidores' => $rows));
 
     // ── Crear ─────────────────────────────────────────────────────────────────
@@ -87,14 +60,10 @@ switch ($action) {
         $telefono = trim(isset($body['telefono'])        ? $body['telefono']        : '') ?: null;
         $email    = trim(isset($body['email'])           ? $body['email']           : '') ?: null;
 
-        if (!$nombre || !$username || !$password) {
-            jsonErr('nombre_completo, username y password son obligatorios');
-        }
-        if (strlen($password) < 6) {
-            jsonErr('La contraseña debe tener al menos 6 caracteres');
-        }
+        if (!$nombre || !$username || !$password) jsonErr('nombre_completo, username y password son obligatorios');
+        if (strlen($password) < 6) jsonErr('La contraseña debe tener al menos 6 caracteres');
 
-        $check = $pdo->prepare("SELECT id FROM usuarios WHERE username = ?");
+        $check = $pdo->prepare("SELECT id FROM usuarios WHERE username = ? LIMIT 1");
         $check->execute(array($username));
         if ($check->fetch()) jsonErr("El usuario '$username' ya existe");
 
@@ -102,99 +71,44 @@ switch ($action) {
         $token = bin2hex(random_bytes(32));
 
         try {
-            $pdo->beginTransaction();
-
             $pdo->prepare("
-                INSERT INTO repartidores (nombre_completo, telefono, email, activo, estado)
-                VALUES (?, ?, ?, 1, 'No disponible')
-            ")->execute(array($nombre, $telefono, $email));
+                INSERT INTO usuarios (username, password_hash, rol, api_token, activo, nombre_completo, telefono, email, estado)
+                VALUES (?, ?, 'repartidor', ?, 1, ?, ?, ?, 'No disponible')
+            ")->execute(array($username, $hash, $token, $nombre, $telefono, $email));
 
-            $newId = (int) $pdo->lastInsertId();
-
-            $pdo->prepare("
-                INSERT INTO usuarios (id, username, password_hash, rol, api_token, activo)
-                VALUES (?, ?, ?, 'repartidor', ?, 1)
-            ")->execute(array($newId, $username, $hash, $token));
-
-            $pdo->commit();
-            jsonOk(array('id_repartidor' => $newId));
-
+            jsonOk(array('id' => (int)$pdo->lastInsertId()));
         } catch (PDOException $e) {
-            $pdo->rollBack();
             if ($e->getCode() === '23000') jsonErr("El usuario '$username' ya existe");
-            jsonErr('Error al crear repartidor: ' . $e->getMessage(), 500);
+            jsonErr('Error al crear: ' . $e->getMessage(), 500);
         }
 
     // ── Toggle activo ─────────────────────────────────────────────────────────
     case 'toggle':
-        $id_rep = (int)(isset($body['id_repartidor']) ? $body['id_repartidor'] : 0);
-        $uid    = (int)(isset($body['uid'])           ? $body['uid']           : 0);
-        $activo = (int)(isset($body['activo'])        ? $body['activo']        : 0);
-        if (!$id_rep) jsonErr('id_repartidor requerido');
-
-        $pdo->beginTransaction();
-        $pdo->prepare("UPDATE repartidores SET activo = ? WHERE id_repartidor = ?")->execute(array($activo, $id_rep));
-        if ($uid) {
-            $pdo->prepare("UPDATE usuarios SET activo = ? WHERE id = ?")->execute(array($activo, $uid));
-        } else {
-            // Fallback: actualizar por nombre_completo = username
-            $pdo->prepare("UPDATE usuarios u JOIN repartidores r ON r.id_repartidor = ?
-                           SET u.activo = ? WHERE u.rol = 'repartidor' AND u.id = r.id_repartidor")
-                ->execute(array($id_rep, $activo));
-        }
-        $pdo->commit();
+        $uid    = (int)(isset($body['uid']) ? $body['uid'] : (isset($body['id_repartidor']) ? $body['id_repartidor'] : 0));
+        $activo = (int)(isset($body['activo']) ? $body['activo'] : 0);
+        if (!$uid) jsonErr('uid requerido');
+        $pdo->prepare("UPDATE usuarios SET activo = ? WHERE id = ? AND rol = 'repartidor'")->execute(array($activo, $uid));
         jsonOk();
 
     // ── Cambiar contraseña ────────────────────────────────────────────────────
     case 'change_password':
-        $id_rep   = (int)(isset($body['id_repartidor']) ? $body['id_repartidor'] : 0);
-        $uid      = (int)(isset($body['uid'])           ? $body['uid']           : 0);
-        $password = isset($body['password'])            ? $body['password']       : '';
-        if (!$id_rep || !$password) jsonErr('id_repartidor y password requeridos');
-        if (strlen($password) < 6) jsonErr('La contraseña debe tener al menos 6 caracteres');
-
+        $uid      = (int)(isset($body['uid']) ? $body['uid'] : (isset($body['id_repartidor']) ? $body['id_repartidor'] : 0));
+        $password = isset($body['password']) ? $body['password'] : '';
+        if (!$uid || !$password) jsonErr('uid y password requeridos');
+        if (strlen($password) < 6) jsonErr('Mínimo 6 caracteres');
         $hash = password_hash($password, PASSWORD_DEFAULT);
-
-        // Intentar con uid directo primero, luego con id_repartidor, luego búsqueda por nombre
-        $updated = 0;
-        if ($uid) {
-            $s = $pdo->prepare("UPDATE usuarios SET password_hash = ? WHERE id = ? AND rol = 'repartidor'");
-            $s->execute(array($hash, $uid));
-            $updated = $s->rowCount();
-        }
-        if (!$updated) {
-            $s = $pdo->prepare("UPDATE usuarios SET password_hash = ? WHERE id = ? AND rol = 'repartidor'");
-            $s->execute(array($hash, $id_rep));
-            $updated = $s->rowCount();
-        }
-        if (!$updated) {
-            // Último recurso: buscar el usuario cuyo username coincide con nombre_completo en repartidores
-            $s = $pdo->prepare("
-                UPDATE usuarios u
-                JOIN repartidores r ON u.username = r.nombre_completo
-                SET u.password_hash = ?
-                WHERE r.id_repartidor = ? AND u.rol = 'repartidor'
-            ");
-            $s->execute(array($hash, $id_rep));
-            $updated = $s->rowCount();
-        }
-        if (!$updated) jsonErr('Usuario no encontrado. Verifica que el repartidor tiene cuenta en la tabla usuarios.');
+        $stmt = $pdo->prepare("UPDATE usuarios SET password_hash = ? WHERE id = ? AND rol = 'repartidor'");
+        $stmt->execute(array($hash, $uid));
+        if (!$stmt->rowCount()) jsonErr('Usuario no encontrado');
         jsonOk();
 
     // ── Eliminar ──────────────────────────────────────────────────────────────
     case 'delete':
-        $id_rep = (int)(isset($body['id_repartidor']) ? $body['id_repartidor'] : 0);
-        $uid    = (int)(isset($body['uid'])           ? $body['uid']           : 0);
-        if (!$id_rep) jsonErr('id_repartidor requerido');
-
+        $uid = (int)(isset($body['uid']) ? $body['uid'] : (isset($body['id_repartidor']) ? $body['id_repartidor'] : 0));
+        if (!$uid) jsonErr('uid requerido');
         $pdo->beginTransaction();
-        $pdo->prepare("DELETE FROM posiciones_historial WHERE id_repartidor = ?")->execute(array($id_rep));
-        if ($uid) {
-            $pdo->prepare("DELETE FROM usuarios WHERE id = ?")->execute(array($uid));
-        } else {
-            $pdo->prepare("DELETE FROM usuarios WHERE id = ? AND rol = 'repartidor'")->execute(array($id_rep));
-        }
-        $pdo->prepare("DELETE FROM repartidores WHERE id_repartidor = ?")->execute(array($id_rep));
+        $pdo->prepare("DELETE FROM posiciones_historial WHERE id_repartidor = ?")->execute(array($uid));
+        $pdo->prepare("DELETE FROM usuarios WHERE id = ? AND rol = 'repartidor'")->execute(array($uid));
         $pdo->commit();
         jsonOk();
 
