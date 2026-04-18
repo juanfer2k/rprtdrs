@@ -114,18 +114,27 @@ try {
         exit;
     }
 
-    // 1. Actualizar repartidores (Ubicación y opcionalmente Estado)
+    // 1. Actualizar repartidores
     if ($estado) {
-        $sqlUpd = "UPDATE repartidores SET latitud = ?, longitud = ?, estado = ?, ultima_actualizacion = NOW() WHERE id_repartidor = ?";
-        $pdo->prepare($sqlUpd)->execute([$lat, $lng, $estado, $id_repartidor]);
+        $pdo->prepare("UPDATE repartidores SET latitud=?, longitud=?, estado=?, ultima_actualizacion=NOW() WHERE id_repartidor=?")
+            ->execute([$lat, $lng, $estado, $id_repartidor]);
+        // Actualizar también usuarios (tabla origen con ENUM de estado)
+        // Solo actualizar si el estado es un valor válido del ENUM
+        $estadosValidos = ['Disponible','No disponible','En camino a recoger','En camino a entrega','Pedido Entregado','libre','ocupado','desconectado'];
+        if (in_array($estado, $estadosValidos)) {
+            $pdo->prepare("UPDATE usuarios SET latitud=?, longitud=?, estado=?, ultima_actualizacion=NOW() WHERE id=?")
+                ->execute([$lat, $lng, $estado, $user['id']]);
+        }
     } else {
-        $sqlUpd = "UPDATE repartidores SET latitud = ?, longitud = ?, ultima_actualizacion = NOW() WHERE id_repartidor = ?";
-        $pdo->prepare($sqlUpd)->execute([$lat, $lng, $id_repartidor]);
+        $pdo->prepare("UPDATE repartidores SET latitud=?, longitud=?, ultima_actualizacion=NOW() WHERE id_repartidor=?")
+            ->execute([$lat, $lng, $id_repartidor]);
+        $pdo->prepare("UPDATE usuarios SET latitud=?, longitud=?, ultima_actualizacion=NOW() WHERE id=?")
+            ->execute([$lat, $lng, $user['id']]);
     }
 
-    // 2. Guardar en historial de posiciones
-    $sqlHist = "INSERT INTO posiciones_historial (id_repartidor, latitud, longitud) VALUES (?, ?, ?)";
-    $pdo->prepare($sqlHist)->execute([$id_repartidor, $lat, $lng]);
+    // 2. Historial de posiciones
+    $pdo->prepare("INSERT INTO posiciones_historial (id_repartidor, latitud, longitud) VALUES (?,?,?)")
+        ->execute([$id_repartidor, $lat, $lng]);
 
     echo json_encode(["status" => "success", "message" => "Sincronizado correctamente"]);
 
