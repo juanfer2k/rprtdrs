@@ -1,4 +1,6 @@
 <?php
+ini_set('display_errors', 0);
+error_reporting(0);
 // --- Archivo: www/api/track.php ---
 // API Unificada para Seguimiento y Actualización de Estado
 

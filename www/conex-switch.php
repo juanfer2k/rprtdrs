@@ -1,21 +1,16 @@
 <?php
-/**
- * Connection switcher:
- * - Local XAMPP: set env APP_ENV=local (or local/xampp/dev), it loads conex.local.php
- * - Otherwise: loads production-style conex.php
- */
+ini_set('display_errors', 0);
+error_reporting(0);
+
 $appEnv = strtolower((string) getenv('APP_ENV'));
+$localEnvs = array('local', 'xampp', 'dev');
 
-$isLocalRequest = false;
-$serverName = strtolower((string) ($_SERVER['SERVER_NAME'] ?? ''));
-$serverAddr = (string) ($_SERVER['SERVER_ADDR'] ?? '');
+$localFile = __DIR__ . '/conex.local.php';
+$prodFile  = __DIR__ . '/conex.php';
 
-if ($serverName === 'localhost' || $serverName === '127.0.0.1' || $serverAddr === '127.0.0.1' || $serverAddr === '::1') {
-    $isLocalRequest = true;
-}
-
-if (in_array($appEnv, ['local', 'xampp', 'dev'], true) || $isLocalRequest) {
-    require_once __DIR__ . '/conex.local.php';
+// Cargar conex.local.php solo si: APP_ENV es local Y el archivo existe físicamente
+if (in_array($appEnv, $localEnvs, true) && file_exists($localFile)) {
+    require_once $localFile;
 } else {
-    require_once __DIR__ . '/conex.php';
+    require_once $prodFile;
 }
