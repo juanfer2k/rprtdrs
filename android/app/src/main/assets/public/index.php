@@ -1,4 +1,3 @@
 <?php
-header("Location: panel.php");
+header('Location: login.php', true, 302);
 exit;
-?>

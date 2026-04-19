@@ -1,4 +1,6 @@
 <?php
+ini_set('display_errors', 0);
+error_reporting(0);
 // --- Archivo: www/api/track.php ---
 // API Unificada para Seguimiento y Actualización de Estado
 
@@ -11,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-require_once '../conex-switch.php';
+require_once __DIR__ . '/../conex-switch.php';
 
 function getRequestHeadersSafe() {
     if (function_exists('apache_request_headers')) {
@@ -75,19 +77,11 @@ try {
         exit;
     }
 
-    $id_repartidor = (int)$user['id'];
+    $uid = (int)$user['id'];
 
-    $stmtRep = $pdo->prepare("SELECT id_repartidor FROM repartidores WHERE id_repartidor = ? AND activo = 1 LIMIT 1");
-    $stmtRep->execute([$id_repartidor]);
-    if (!$stmtRep->fetch()) {
-        http_response_code(409);
-        echo json_encode(["status" => "error", "message" => "Perfil de repartidor no vinculado o inactivo"]);
-        exit;
-    }
-
-    $lat = $data['lat'] ?? $data['latitud'] ?? null;
-    $lng = $data['lng'] ?? $data['longitud'] ?? null;
-    $estado = $data['estado'] ?? null;
+    $lat    = isset($data['lat'])    ? $data['lat']    : (isset($data['latitud'])  ? $data['latitud']  : null);
+    $lng    = isset($data['lng'])    ? $data['lng']    : (isset($data['longitud']) ? $data['longitud'] : null);
+    $estado = isset($data['estado']) ? $data['estado'] : null;
 
     if ($lat === null || $lng === null) {
         http_response_code(400);
@@ -95,18 +89,19 @@ try {
         exit;
     }
 
-    // 1. Actualizar repartidores (Ubicación y opcionalmente Estado)
-    if ($estado) {
-        $sqlUpd = "UPDATE repartidores SET latitud = ?, longitud = ?, estado = ?, ultima_actualizacion = NOW() WHERE id_repartidor = ?";
-        $pdo->prepare($sqlUpd)->execute([$lat, $lng, $estado, $id_repartidor]);
+    // Actualizar ubicación y estado directamente en usuarios
+    $estadosValidos = ['Disponible','No disponible','En camino a recoger','En camino a entrega','Pedido Entregado','libre','ocupado','desconectado'];
+    if ($estado && in_array($estado, $estadosValidos)) {
+        $pdo->prepare("UPDATE usuarios SET latitud=?, longitud=?, estado=?, ultima_actualizacion=NOW() WHERE id=?")
+            ->execute([$lat, $lng, $estado, $uid]);
     } else {
-        $sqlUpd = "UPDATE repartidores SET latitud = ?, longitud = ?, ultima_actualizacion = NOW() WHERE id_repartidor = ?";
-        $pdo->prepare($sqlUpd)->execute([$lat, $lng, $id_repartidor]);
+        $pdo->prepare("UPDATE usuarios SET latitud=?, longitud=?, ultima_actualizacion=NOW() WHERE id=?")
+            ->execute([$lat, $lng, $uid]);
     }
 
-    // 2. Guardar en historial de posiciones
-    $sqlHist = "INSERT INTO posiciones_historial (id_repartidor, latitud, longitud) VALUES (?, ?, ?)";
-    $pdo->prepare($sqlHist)->execute([$id_repartidor, $lat, $lng]);
+    // Historial de posiciones (usa usuarios.id como id_repartidor)
+    $pdo->prepare("INSERT INTO posiciones_historial (id_repartidor, latitud, longitud) VALUES (?,?,?)")
+        ->execute([$uid, $lat, $lng]);
 
     echo json_encode(["status" => "success", "message" => "Sincronizado correctamente"]);
 

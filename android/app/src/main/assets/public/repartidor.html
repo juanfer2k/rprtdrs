@@ -1,21 +1,93 @@
 <!DOCTYPE html>
-<html lang="es" data-bs-theme="dark">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Panel Repartidor</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css?v=1.1" />
+    <link rel="stylesheet" href="style.css?v=2.0" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        /* ── Profile modal overlay ── */
+        #perfil-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.6);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        #perfil-overlay.open { display: flex; }
+        #perfil-card {
+            background: #1e2130;
+            color: #e4e6eb;
+            border-radius: 16px;
+            padding: 24px;
+            width: min(94vw, 380px);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        #perfil-card h3 { margin: 0 0 16px; font-size: 1.1rem; }
+        #perfil-card label { font-size: .82rem; color: #8b949e; display: block; margin: 12px 0 4px; }
+        #perfil-card input[type=text],
+        #perfil-card input[type=email],
+        #perfil-card input[type=tel],
+        #perfil-card input[type=password] {
+            width: 100%; padding: 8px 10px; border-radius: 8px;
+            border: 1px solid #2e3347; background: #141722; color: #e4e6eb;
+            font-size: .9rem; box-sizing: border-box;
+        }
+        #perfil-card .btn-row { display: flex; gap: 8px; margin-top: 16px; }
+        #perfil-card button { flex: 1; padding: 9px; border-radius: 8px; border: none; cursor: pointer; font-size: .9rem; }
+        .btn-save   { background: #3b82f6; color: #fff; }
+        .btn-cancel { background: #374151; color: #e4e6eb; }
+        #perfil-foto-preview {
+            width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
+            border: 3px solid #3b82f6; display: block; margin: 0 auto 12px;
+            cursor: pointer;
+        }
+        #perfil-foto-input { display: none; }
+        .perfil-msg { font-size: .8rem; margin-top: 10px; padding: 6px 10px; border-radius: 6px; }
+        .perfil-msg.ok  { background: #16a34a22; color: #4ade80; }
+        .perfil-msg.err { background: #dc262622; color: #f87171; }
+        /* ── Pedidos ── */
+        #pedidos-section { margin-top: 12px; }
+        #pedidos-section h3 { font-size: .9rem; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; margin-bottom: 8px; }
+        .pedido-card { background: #1e2130; border-radius: 10px; padding: 12px; margin-bottom: 8px; border-left: 4px solid #3b82f6; }
+        .pedido-card.entregado { border-color: #16a34a; opacity: .6; }
+        .pedido-card .pedido-cliente { font-weight: 600; font-size: .9rem; }
+        .pedido-card .pedido-dir { font-size: .8rem; color: #9ca3af; margin: 2px 0 8px; }
+        .pedido-card .pedido-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .pedido-card button { font-size: .75rem; padding: 4px 10px; border-radius: 6px; border: none; cursor: pointer; }
+        .btn-en-camino  { background: #f59e0b; color: #000; }
+        .btn-entregado  { background: #16a34a; color: #fff; }
+        .btn-cancelado  { background: #6b7280; color: #fff; }
+        #pedidos-empty  { font-size: .85rem; color: #6b7280; text-align: center; padding: 12px 0; }
+        .perfil-section-title {
+            font-size: .75rem; text-transform: uppercase; letter-spacing: .06em;
+            color: #6b7280; margin: 20px 0 8px; border-top: 1px solid #2e3347; padding-top: 14px;
+        }
+        #btn-editar-perfil {
+            position: absolute; top: 10px; right: 10px;
+            background: transparent; border: 1px solid #4b5563;
+            color: #9ca3af; border-radius: 8px; padding: 4px 10px;
+            font-size: .8rem; cursor: pointer;
+        }
+    </style>
 </head>
 <body class="repartidor-view" data-status="unavailable">
 
-<header class="app-header">
+<!-- Redirect if no session -->
+<script>
+    if (!localStorage.getItem('api_token')) {
+        window.location.replace('login.php');
+    }
+</script>
+
+<header class="app-header" style="position:relative">
     <img src="assets/imgs/logo.png" alt="Logo" class="logo">
     <h1>Panel del Repartidor</h1>
-    <button id="theme-toggle" type="button" style="margin-left:auto; border:1px solid #cbd5e1; background:transparent; color:inherit; border-radius:999px; padding:6px 12px; cursor:pointer;">
-        🌙 Oscuro
-    </button>
+    <button id="btn-editar-perfil" onclick="abrirPerfil()">✏️ Perfil</button>
 </header>
 
 <div id="map"></div>
@@ -25,224 +97,366 @@
     <div class="panel-content">
 
         <div id="profile-section">
-            <!-- El perfil se carga automáticamente vía inyección nativa del token/ID -->
             <div id="profile-display">
-                <img id="profile-pic" src="assets/imgs/default-user.png" alt="Foto de perfil">
+                <img id="profile-pic" src="assets/imgs/logo.png" alt="Foto de perfil">
                 <div id="profile-details">
-                    <h4 id="profile-name">Cargando sesión...</h4>
-                    <span id="profile-id">Espere por favor</span>
+                    <h4 id="profile-name">Cargando...</h4>
+                    <span id="profile-id"></span>
                 </div>
             </div>
         </div>
 
         <div id="controls-wrapper" class="disabled">
             <h3>Mi Estado</h3>
-            <div id="status-display">Actual: <span id="current-status">Cargando...</span></div>
+            <div id="status-display">Actual: <span id="current-status">—</span></div>
             <button id="status-available">Disponible</button>
             <button id="status-unavailable">No disponible</button>
             <button id="status-pickup">En camino a recoger</button>
             <button id="status-delivered">En camino a entrega</button>
             <button id="status-order-delivered" class="order-delivered-btn">✓ Pedido Entregado</button>
             <button id="get-location">Actualizar Mi Ubicación</button>
-            <button id="compass-toggle">Activar Brújula</button>
+
+            <div id="pedidos-section">
+                <h3>📦 Mis Pedidos</h3>
+                <div id="pedidos-list"><p id="pedidos-empty">Sin pedidos asignados</p></div>
+            </div>
         </div>
     </div>
 </div>
 
 <div id="toast-container"></div>
 
+<!-- ── Modal de perfil ────────────────────────────────────────────────────── -->
+<div id="perfil-overlay">
+    <div id="perfil-card">
+        <h3>✏️ Mi Perfil</h3>
+
+        <img id="perfil-foto-preview" src="assets/imgs/logo.png" alt="Foto" onclick="document.getElementById('perfil-foto-input').click()">
+        <input type="file" id="perfil-foto-input" accept="image/*">
+        <p style="text-align:center;font-size:.75rem;color:#6b7280;margin:0">Toca la foto para cambiarla</p>
+
+        <label>Nombre</label>
+        <input type="text" id="pf-nombre" readonly style="opacity:.6">
+
+        <label>Teléfono</label>
+        <input type="tel" id="pf-telefono" placeholder="Ej: 3001234567">
+
+        <label>Email</label>
+        <input type="email" id="pf-email" placeholder="correo@ejemplo.com">
+
+        <div id="msg-info" class="perfil-msg" style="display:none"></div>
+
+        <div class="btn-row">
+            <button class="btn-cancel" onclick="cerrarPerfil()">Cancelar</button>
+            <button class="btn-save" onclick="guardarPerfil()">Guardar</button>
+        </div>
+
+        <p class="perfil-section-title">Cambiar Contraseña</p>
+
+        <label>Contraseña actual</label>
+        <input type="password" id="pf-pwd-actual" placeholder="••••••">
+
+        <label>Nueva contraseña</label>
+        <input type="password" id="pf-pwd-nueva" placeholder="Mín. 6 caracteres">
+
+        <label>Repetir nueva contraseña</label>
+        <input type="password" id="pf-pwd-repeat" placeholder="••••••">
+
+        <div id="msg-pwd" class="perfil-msg" style="display:none"></div>
+
+        <div class="btn-row">
+            <button class="btn-save" onclick="cambiarPassword()" style="background:#f59e0b">Cambiar contraseña</button>
+        </div>
+
+        <div class="btn-row" style="margin-top:20px">
+            <button class="btn-cancel" onclick="logout()" style="background:#7f1d1d;color:#fca5a5">Cerrar sesión</button>
+        </div>
+    </div>
+</div>
+
 <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-        const themeToggleBtn = document.getElementById('theme-toggle');
+document.addEventListener('DOMContentLoaded', function () {
+    var FALLBACK_BASE = 'https://elcerritovalle.org/rprtdrs/';
 
-        function renderThemeButton(mode) {
-            themeToggleBtn.textContent = mode === 'light' ? '☀️ Claro' : '🌙 Oscuro';
-        }
+    function resolveBase() {
+        var stored = localStorage.getItem('api_base_url');
+        if (stored) return stored.endsWith('/') ? stored : stored + '/';
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) return FALLBACK_BASE;
+        return window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+    }
 
-        function applyTheme(theme) {
-            const mode = theme === 'light' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-bs-theme', mode);
-            localStorage.setItem('theme', mode);
-            renderThemeButton(mode);
-        }
+    var BASE_URL  = resolveBase();
+    var TRACK_URL = BASE_URL + 'api/track.php';
+    var PERFIL_URL= BASE_URL + 'api/repartidor_perfil.php';
 
-        (function initTheme() {
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            applyTheme(savedTheme);
-        })();
+    var apiToken    = localStorage.getItem('api_token');
+    var watchId     = null;
+    var lastPos     = null;
+    var currentEstado = 'No disponible';
+    var lastSentAt  = 0;
+    var SEND_EVERY  = 15000;
 
-        themeToggleBtn.addEventListener('click', () => {
-            const current = document.documentElement.getAttribute('data-bs-theme') || 'dark';
-            applyTheme(current === 'dark' ? 'light' : 'dark');
-        });
+    function headers() {
+        return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiToken };
+    }
 
-        // --- CONFIGURACIÓN ---
-        const FALLBACK_NATIVE_BASE_URL = 'https://elcerritovalle.org/rprtdrs/';
+    // ── Mapa ─────────────────────────────────────────────────────────────────
+    var map = L.map('map', { zoomControl: false }).setView([4.60971, -74.08175], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OSM' }).addTo(map);
+    var userMarker = L.marker(map.getCenter()).addTo(map).bindPopup('<b>Mi ubicación</b>');
 
-        function normalizeBaseUrl(url) {
-            if (!url) return '';
-            return url.endsWith('/') ? url : `${url}/`;
-        }
+    // ── Toast ─────────────────────────────────────────────────────────────────
+    function toast(msg, icon) {
+        var el = document.createElement('div');
+        el.className = 'toast show';
+        el.innerHTML = '<div class="icon">' + (icon || '') + '</div><div class="message">' + msg + '</div>';
+        document.getElementById('toast-container').appendChild(el);
+        setTimeout(function() { el.classList.remove('show'); setTimeout(function(){ el.remove(); }, 500); }, 3000);
+    }
 
-        function resolveApiBaseUrl() {
-            const configuredBaseUrl = normalizeBaseUrl(localStorage.getItem('api_base_url') || '');
-            if (configuredBaseUrl) return configuredBaseUrl;
-
-            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                return FALLBACK_NATIVE_BASE_URL;
-            }
-
-            const currentPathBase = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
-            return normalizeBaseUrl(currentPathBase);
-        }
-
-        const BASE_URL = resolveApiBaseUrl();
-        const TRACK_URL = BASE_URL + 'api/track.php';
-
-        let repartidorId = null;
-        let apiToken = null;
-        let lastKnownPosition = null;
-        let watchId = null;
-        let currentEstado = 'No disponible';
-        let lastSentAt = 0;
-        const SEND_EVERY_MS = 15000;
-
-        const controlsWrapper = document.getElementById('controls-wrapper');
-        const statusDisplay = document.getElementById('current-status');
-        const panelToggle = document.getElementById('panel-toggle');
-        const toastContainer = document.getElementById('toast-container');
-        const profileName = document.getElementById('profile-name');
-        const profileIdTag = document.getElementById('profile-id');
-
-        const map = L.map('map', { zoomControl: false }).setView([4.60971, -74.08175], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OSM' }).addTo(map);
-        const userMarker = L.marker(map.getCenter()).addTo(map).bindPopup("<b>Mi ubicación</b>");
-
-        const statusMap = {
-            'status-available': 'Disponible',
-            'status-unavailable': 'No disponible',
-            'status-pickup': 'En camino a recoger',
-            'status-delivered': 'En camino a entrega',
-            'status-order-delivered': 'Pedido Entregado'
-        };
-
-        // --- FUNCIONES ---
-
-        function checkSession() {
-            apiToken = localStorage.getItem('api_token');
-            repartidorId = localStorage.getItem('repartidor_id');
-
-            if (apiToken && repartidorId) {
-                profileName.textContent = "Repartidor #" + repartidorId;
-                profileIdTag.textContent = "Sesión Activa";
-                controlsWrapper.classList.remove('disabled');
-                startWatchingPosition();
-                setStatus('status-unavailable');
-                return true;
-            }
-            return false;
-        }
-
-        // Re-intentar cada segundo hasta que la inyección nativa funcione
-        const sessionInterval = setInterval(() => {
-            if (checkSession()) {
-                clearInterval(sessionInterval);
-                showToast("Sesión iniciada correctamente", "✓");
-            }
-        }, 1000);
-
-        function showToast(message, icon) {
-            const toast = document.createElement('div');
-            toast.className = 'toast show';
-            toast.innerHTML = `<div class="icon">${icon || ''}</div><div class="message">${message}</div>`;
-            toastContainer.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 500);
-            }, 3000);
-        }
-
-        function updateLocation(lat, lng) {
-            lastKnownPosition = { lat, lng };
-            userMarker.setLatLng([lat, lng]);
-            map.panTo([lat, lng]);
-        }
-
-        async function sendUpdate(force = false) {
-            if (!apiToken || !lastKnownPosition) return;
-            const now = Date.now();
-            if (!force && (now - lastSentAt) < SEND_EVERY_MS) return;
-            lastSentAt = now;
-
-            const payload = {
-                lat: lastKnownPosition.lat,
-                lng: lastKnownPosition.lng,
-                estado: currentEstado
-            };
-
-            try {
-                const response = await fetch(TRACK_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiToken}`
-                    },
-                    body: JSON.stringify(payload),
-                    mode: 'cors'
-                });
-
-                const result = await response.json();
-                if (result.status === 'success') {
-                    const indicator = document.getElementById('current-status');
-                    indicator.style.color = '#4CAF50';
-                    setTimeout(() => indicator.style.color = '', 1000);
+    // ── Cargar perfil ────────────────────────────────────────────────────────
+    function cargarPerfil() {
+        fetch(PERFIL_URL + '?action=get', { headers: headers() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status !== 'success') { logout(); return; }
+                var p = d.perfil;
+                document.getElementById('profile-name').textContent = p.nombre_completo || 'Repartidor';
+                document.getElementById('profile-id').textContent   = '@' + (p.username || '');
+                if (p.foto_url) {
+                    var src = BASE_URL + p.foto_url;
+                    document.getElementById('profile-pic').src       = src;
+                    document.getElementById('perfil-foto-preview').src = src;
                 }
-            } catch (err) {
-                console.error('Error sincronizando:', err);
-            }
-        }
+                document.getElementById('pf-nombre').value   = p.nombre_completo || '';
+                document.getElementById('pf-telefono').value = p.telefono || '';
+                document.getElementById('pf-email').value    = p.email || '';
+                document.getElementById('controls-wrapper').classList.remove('disabled');
+                startWatch();
+                setStatus('status-unavailable');
+            })
+            .catch(function() { logout(); });
+    }
 
-        async function startWatchingPosition() {
-            if (watchId != null) navigator.geolocation.clearWatch(watchId);
-            watchId = navigator.geolocation.watchPosition((pos) => {
-                updateLocation(pos.coords.latitude, pos.coords.longitude);
+    cargarPerfil();
+
+    // ── GPS ───────────────────────────────────────────────────────────────────
+    function startWatch() {
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+        watchId = navigator.geolocation.watchPosition(
+            function(pos) {
+                lastPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                userMarker.setLatLng([lastPos.lat, lastPos.lng]);
+                map.panTo([lastPos.lat, lastPos.lng]);
                 sendUpdate(false);
-            }, (err) => {
-                showToast("GPS: Permiso denegado o sin señal", "!");
-            }, {
-                enableHighAccuracy: true,
-                timeout: 20000,
-                maximumAge: 5000
-            });
-        }
+            },
+            function() { toast('GPS: sin señal', '!'); },
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 }
+        );
+    }
 
-        function setStatus(newStatusId) {
-            const newStatusText = statusMap[newStatusId];
-            if (!newStatusText) return;
-            currentEstado = newStatusText;
-            statusDisplay.textContent = `Actual: ${newStatusText}`;
-            document.body.setAttribute('data-status', newStatusId.replace('status-', ''));
-            statusButtons.forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.id === newStatusId) btn.classList.add('active');
-            });
-            sendUpdate(true);
-        }
+    function sendUpdate(force) {
+        if (!apiToken || !lastPos) return;
+        var now = Date.now();
+        if (!force && (now - lastSentAt) < SEND_EVERY) return;
+        lastSentAt = now;
+        fetch(TRACK_URL, {
+            method: 'POST',
+            headers: headers(),
+            body: JSON.stringify({ lat: lastPos.lat, lng: lastPos.lng, estado: currentEstado }),
+            mode: 'cors'
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.status === 'success') {
+                var el = document.getElementById('current-status');
+                el.style.color = '#4CAF50';
+                setTimeout(function() { el.style.color = ''; }, 1000);
+            }
+        })
+        .catch(function() {});
+    }
 
-        const statusButtons = controlsWrapper.querySelectorAll('button[id^="status-"]');
-        statusButtons.forEach(btn => btn.addEventListener('click', () => setStatus(btn.id)));
-        panelToggle.addEventListener('click', () => document.getElementById('status-panel').classList.toggle('collapsed'));
+    // ── Estado ────────────────────────────────────────────────────────────────
+    var statusMap = {
+        'status-available':       'Disponible',
+        'status-unavailable':     'No disponible',
+        'status-pickup':          'En camino a recoger',
+        'status-delivered':       'En camino a entrega',
+        'status-order-delivered': 'Pedido Entregado'
+    };
 
-        document.getElementById('get-location').addEventListener('click', () => {
-            showToast("Buscando señal GPS...", "🛰️");
-            startWatchingPosition();
+    function setStatus(id) {
+        var text = statusMap[id];
+        if (!text) return;
+        currentEstado = text;
+        document.getElementById('current-status').textContent = text;
+        document.body.setAttribute('data-status', id.replace('status-', ''));
+        document.querySelectorAll('#controls-wrapper button[id^="status-"]').forEach(function(b) {
+            b.classList.toggle('active', b.id === id);
         });
+        sendUpdate(true);
+    }
 
-        document.getElementById('compass-toggle').addEventListener('click', () => {
-            map.setZoom(18);
-            showToast("Zoom de precisión activado", "🧭");
-        });
+    document.querySelectorAll('#controls-wrapper button[id^="status-"]').forEach(function(btn) {
+        btn.addEventListener('click', function() { setStatus(btn.id); });
     });
+
+    document.getElementById('panel-toggle').addEventListener('click', function() {
+        document.getElementById('status-panel').classList.toggle('collapsed');
+    });
+
+    document.getElementById('get-location').addEventListener('click', function() {
+        toast('Buscando señal GPS...', '🛰️');
+        startWatch();
+    });
+
+    // ── Modal perfil ──────────────────────────────────────────────────────────
+    window.abrirPerfil = function() {
+        document.getElementById('perfil-overlay').classList.add('open');
+    };
+    window.cerrarPerfil = function() {
+        document.getElementById('perfil-overlay').classList.remove('open');
+        ['msg-info','msg-pwd'].forEach(function(id){ document.getElementById(id).style.display='none'; });
+    };
+
+    // Foto preview antes de subir
+    document.getElementById('perfil-foto-input').addEventListener('change', function() {
+        var file = this.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) { document.getElementById('perfil-foto-preview').src = e.target.result; };
+        reader.readAsDataURL(file);
+        subirFoto(file);
+    });
+
+    function subirFoto(file) {
+        var form = new FormData();
+        form.append('foto', file);
+        form.append('token', apiToken);
+        fetch(PERFIL_URL + '?action=upload_photo', { method: 'POST', body: form })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'success') {
+                    document.getElementById('profile-pic').src = BASE_URL + d.foto_url;
+                    mostrarMsg('msg-info', 'Foto actualizada', true);
+                } else {
+                    mostrarMsg('msg-info', d.message || 'Error al subir foto', false);
+                }
+            })
+            .catch(function() { mostrarMsg('msg-info', 'Error de conexión', false); });
+    }
+
+    window.guardarPerfil = function() {
+        var payload = {
+            telefono: document.getElementById('pf-telefono').value.trim(),
+            email:    document.getElementById('pf-email').value.trim()
+        };
+        fetch(PERFIL_URL + '?action=update_profile', {
+            method: 'POST', headers: headers(), body: JSON.stringify(payload)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            mostrarMsg('msg-info', d.status === 'success' ? 'Guardado correctamente' : (d.message || 'Error'), d.status === 'success');
+        })
+        .catch(function() { mostrarMsg('msg-info', 'Error de conexión', false); });
+    };
+
+    window.cambiarPassword = function() {
+        var actual  = document.getElementById('pf-pwd-actual').value;
+        var nueva   = document.getElementById('pf-pwd-nueva').value;
+        var repeat  = document.getElementById('pf-pwd-repeat').value;
+        if (!actual || !nueva) { mostrarMsg('msg-pwd', 'Completa todos los campos', false); return; }
+        if (nueva !== repeat)  { mostrarMsg('msg-pwd', 'Las contraseñas no coinciden', false); return; }
+        if (nueva.length < 6)  { mostrarMsg('msg-pwd', 'Mínimo 6 caracteres', false); return; }
+        fetch(PERFIL_URL + '?action=change_password', {
+            method: 'POST', headers: headers(),
+            body: JSON.stringify({ password_actual: actual, password_nueva: nueva })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            mostrarMsg('msg-pwd', d.status === 'success' ? 'Contraseña actualizada' : (d.message || 'Error'), d.status === 'success');
+            if (d.status === 'success') {
+                document.getElementById('pf-pwd-actual').value = '';
+                document.getElementById('pf-pwd-nueva').value  = '';
+                document.getElementById('pf-pwd-repeat').value = '';
+            }
+        })
+        .catch(function() { mostrarMsg('msg-pwd', 'Error de conexión', false); });
+    };
+
+    function mostrarMsg(id, text, ok) {
+        var el = document.getElementById(id);
+        el.textContent = text;
+        el.className = 'perfil-msg ' + (ok ? 'ok' : 'err');
+        el.style.display = 'block';
+        if (ok) setTimeout(function(){ el.style.display='none'; }, 3000);
+    }
+
+    // ── Pedidos ───────────────────────────────────────────────────────────────
+    var PEDIDOS_URL = BASE_URL + 'api/pedidos.php';
+
+    function cargarPedidos() {
+        fetch(PEDIDOS_URL + '?action=mis_pedidos', { headers: headers() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status !== 'success') return;
+                renderPedidos(d.pedidos);
+            })
+            .catch(function() {});
+    }
+
+    function renderPedidos(pedidos) {
+        var container = document.getElementById('pedidos-list');
+        if (!pedidos || !pedidos.length) {
+            container.innerHTML = '<p id="pedidos-empty">Sin pedidos asignados</p>';
+            return;
+        }
+        container.innerHTML = pedidos.map(function(p) {
+            var esEntregado = p.estado === 'entregado';
+            var badgeColor  = { 'pendiente':'#f59e0b', 'en camino':'#3b82f6', 'entregado':'#16a34a', 'cancelado':'#6b7280' }[p.estado] || '#6b7280';
+            return '<div class="pedido-card' + (esEntregado ? ' entregado' : '') + '">' +
+                '<div class="pedido-cliente">#' + p.id_pedido + ' ' + esc(p.cliente_nombre) +
+                '  <span style="font-size:.7rem;padding:2px 7px;border-radius:99px;background:' + badgeColor + ';color:#fff">' + p.estado + '</span></div>' +
+                '<div class="pedido-dir">📍 ' + esc(p.direccion_entrega) + '</div>' +
+                (esEntregado ? '' :
+                '<div class="pedido-btns">' +
+                    (p.estado !== 'en camino' ? '<button class="btn-en-camino" onclick="actualizarPedido(' + p.id_pedido + ',\'en camino\')">🚚 En camino</button>' : '') +
+                    '<button class="btn-entregado" onclick="actualizarPedido(' + p.id_pedido + ',\'entregado\')">✓ Entregado</button>' +
+                    '<button class="btn-cancelado" onclick="actualizarPedido(' + p.id_pedido + ',\'cancelado\')">✕ Cancelar</button>' +
+                '</div>') +
+            '</div>';
+        }).join('');
+    }
+
+    function esc(str) {
+        return str == null ? '' : String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    window.actualizarPedido = function(id_pedido, estado) {
+        fetch(PEDIDOS_URL + '?action=update_estado', {
+            method: 'POST', headers: headers(),
+            body: JSON.stringify({ id_pedido: id_pedido, estado: estado })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.status === 'success') { cargarPedidos(); toast('Pedido actualizado', '✓'); }
+            else toast(d.message || 'Error', '!');
+        })
+        .catch(function() { toast('Error de conexión', '!'); });
+    };
+
+    // Cargar pedidos al inicio y cada 30s
+    setTimeout(cargarPedidos, 1500);
+    setInterval(cargarPedidos, 30000);
+
+    window.logout = function() {
+        localStorage.removeItem('api_token');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('repartidor_id');
+        window.location.replace('login.php');
+    };
+});
 </script>
 
 </body>
