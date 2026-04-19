@@ -232,7 +232,9 @@
                     <input type="hidden" id="pwd-id">
                     <input type="hidden" id="pwd-uid">
                     <label class="form-label">Nueva contraseña</label>
-                    <input type="password" class="form-control" id="pwd-nueva" required>
+                    <input type="password" class="form-control" id="pwd-nueva" required minlength="6">
+                    <label class="form-label mt-2">Confirmar contraseña</label>
+                    <input type="password" class="form-control" id="pwd-confirmar" required minlength="6">
                     <div id="pwd-error" class="alert alert-danger mt-2 d-none"></div>
                 </div>
                 <div class="modal-footer">
@@ -475,6 +477,7 @@
         document.getElementById('pwd-id').value = id;
         document.getElementById('pwd-uid').value = uid;
         document.getElementById('pwd-nueva').value = '';
+        document.getElementById('pwd-confirmar').value = '';
         document.getElementById('pwd-error').classList.add('d-none');
         new bootstrap.Modal(document.getElementById('modalPwd')).show();
     };
@@ -483,13 +486,20 @@
         e.preventDefault();
         const errEl = document.getElementById('pwd-error');
         errEl.classList.add('d-none');
+        const nueva = document.getElementById('pwd-nueva').value;
+        const confirmar = document.getElementById('pwd-confirmar').value;
+        if (nueva !== confirmar) {
+            errEl.textContent = 'Las contraseñas no coinciden';
+            errEl.classList.remove('d-none');
+            return;
+        }
         try {
             const res = await fetch('api/admin_repartidores.php?action=change_password', {
                 method: 'POST', headers: apiHeaders(),
                 body: JSON.stringify({
                     id_repartidor: parseInt(document.getElementById('pwd-id').value),
                     uid:           parseInt(document.getElementById('pwd-uid').value),
-                    password:      document.getElementById('pwd-nueva').value
+                    password:      nueva
                 })
             });
             const data = await res.json();
