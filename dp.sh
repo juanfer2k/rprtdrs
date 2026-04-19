@@ -4,7 +4,7 @@ set -euo pipefail
 # ── Configuración ─────────────────────────────────────────────────────────────
 DEPLOY_DIR="/home2/elcerrit/elcerritovalle.org/rprtdrs"
 REPO_URL="git@github.com:tiparamedicceo/rprtdrs.git"
-BRANCH="master"
+BRANCH="main"
 TMP_DIR="/tmp/rprtdrs_deploy_$$"
 
 echo "🚀 Iniciando despliegue..."
@@ -67,7 +67,15 @@ find "$DEPLOY_DIR" -maxdepth 4 -not -path '*/.git/*' -type f -exec chmod 644 {} 
 chmod -R u+w "$DEPLOY_DIR/uploads/" 2>/dev/null || true
 [ -f "$DEPLOY_DIR/error_log" ] && chmod 666 "$DEPLOY_DIR/error_log" || true
 
-# ── 8. Limpiar temp ───────────────────────────────────────────────────────────
+# ── 8. Auto-actualizar dp.sh ──────────────────────────────────────────────────
+SELF="$(readlink -f "$0")"
+if [ -f "$TMP_DIR/dp.sh" ]; then
+    cp "$TMP_DIR/dp.sh" "$SELF"
+    chmod +x "$SELF"
+    echo "🔄 dp.sh actualizado."
+fi
+
+# ── 9. Limpiar temp ───────────────────────────────────────────────────────────
 rm -rf "$TMP_DIR"
 
 echo ""

@@ -123,7 +123,10 @@
                     <img src="assets/imgs/logo.png" class="logo-img" alt="Logo">
                     <strong>Logística</strong>
                 </div>
-                <button class="btn btn-outline-danger btn-sm" onclick="logout()">Salir</button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="abrirCambioPwdAdmin()" title="Cambiar contraseña">🔑</button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="logout()">Salir</button>
+                </div>
             </div>
 
             <div class="search-box">
@@ -170,6 +173,31 @@
         </div>
 
         <div id="map"></div>
+    </div>
+</div>
+
+<!-- ── Modal: cambiar contraseña admin ──────────────────────────────────── -->
+<div class="modal fade" id="modalPwdAdmin" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <form id="form-pwd-admin">
+                <div class="modal-header">
+                    <h5 class="modal-title">Cambiar mi contraseña</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Nueva contraseña</label>
+                    <input type="password" class="form-control" id="admin-pwd-nueva" required minlength="6">
+                    <label class="form-label mt-2">Confirmar contraseña</label>
+                    <input type="password" class="form-control" id="admin-pwd-confirmar" required minlength="6">
+                    <div id="admin-pwd-error" class="alert alert-danger mt-2 d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Guardar</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -322,6 +350,41 @@
         localStorage.removeItem('api_token');
         window.location.href = 'login.php';
     };
+
+    window.abrirCambioPwdAdmin = function () {
+        document.getElementById('admin-pwd-nueva').value = '';
+        document.getElementById('admin-pwd-confirmar').value = '';
+        document.getElementById('admin-pwd-error').classList.add('d-none');
+        new bootstrap.Modal(document.getElementById('modalPwdAdmin')).show();
+    };
+
+    document.getElementById('form-pwd-admin').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('admin-pwd-error');
+        errEl.classList.add('d-none');
+        const nueva = document.getElementById('admin-pwd-nueva').value;
+        const confirmar = document.getElementById('admin-pwd-confirmar').value;
+        if (nueva !== confirmar) {
+            errEl.textContent = 'Las contraseñas no coinciden';
+            errEl.classList.remove('d-none');
+            return;
+        }
+        const uid = parseInt(localStorage.getItem('repartidor_id') || '0');
+        const token = localStorage.getItem('admin_token') || localStorage.getItem('api_token') || '';
+        try {
+            const res = await fetch('api/admin_repartidores.php?action=change_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ uid, password: nueva })
+            });
+            const data = await res.json();
+            if (data.status !== 'success') throw new Error(data.message);
+            bootstrap.Modal.getInstance(document.getElementById('modalPwdAdmin')).hide();
+        } catch (err) {
+            errEl.textContent = err.message;
+            errEl.classList.remove('d-none');
+        }
+    });
 
     window.fetchData = fetchData;
     setInterval(fetchData, 5000);

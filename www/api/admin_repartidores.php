@@ -124,7 +124,7 @@ switch ($action) {
         if (!$uid || !$password) jsonErr('uid y password requeridos');
         if (strlen($password) < 6) jsonErr('Mínimo 6 caracteres');
         $hash = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("UPDATE usuarios SET password_hash = ? WHERE id = ? AND rol = 'repartidor'");
+        $stmt = $pdo->prepare("UPDATE usuarios SET password_hash = ? WHERE id = ?");
         $stmt->execute(array($hash, $uid));
         if (!$stmt->rowCount()) jsonErr('Usuario no encontrado');
         jsonOk();
