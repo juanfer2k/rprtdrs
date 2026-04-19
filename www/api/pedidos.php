@@ -88,11 +88,30 @@ switch ($action) {
     // Asignar pedido a repartidor (admin)
     case 'asignar':
         if ($user['rol'] !== 'admin') jsonErr('Solo admins', 403);
-        $id_pedido    = (int)(isset($body['id_pedido'])     ? $body['id_pedido']     : 0);
-        $id_rep       = (int)(isset($body['id_repartidor']) ? $body['id_repartidor'] : 0);
+        $id_pedido = (int)(isset($body['id_pedido'])     ? $body['id_pedido']     : 0);
+        $id_rep    = (int)(isset($body['id_repartidor']) ? $body['id_repartidor'] : 0);
         if (!$id_pedido) jsonErr('id_pedido requerido');
         $pdo->prepare("UPDATE pedidos SET id_repartidor = ? WHERE id_pedido = ?")
             ->execute(array($id_rep ?: null, $id_pedido));
+        jsonOk();
+
+    // Crear pedido (admin)
+    case 'crear':
+        if ($user['rol'] !== 'admin') jsonErr('Solo admins', 403);
+        $cliente   = trim(isset($body['cliente_nombre'])    ? $body['cliente_nombre']    : '');
+        $direccion = trim(isset($body['direccion_entrega']) ? $body['direccion_entrega'] : '');
+        $id_rep    = isset($body['id_repartidor']) && $body['id_repartidor'] ? (int)$body['id_repartidor'] : null;
+        if (!$cliente || !$direccion) jsonErr('cliente_nombre y direccion_entrega requeridos');
+        $pdo->prepare("INSERT INTO pedidos (cliente_nombre, direccion_entrega, estado, id_repartidor) VALUES (?, ?, 'pendiente', ?)")
+            ->execute(array($cliente, $direccion, $id_rep));
+        jsonOk(array('id_pedido' => (int)$pdo->lastInsertId()));
+
+    // Eliminar pedido (admin)
+    case 'eliminar':
+        if ($user['rol'] !== 'admin') jsonErr('Solo admins', 403);
+        $id_pedido = (int)(isset($body['id_pedido']) ? $body['id_pedido'] : 0);
+        if (!$id_pedido) jsonErr('id_pedido requerido');
+        $pdo->prepare("DELETE FROM pedidos WHERE id_pedido = ?")->execute(array($id_pedido));
         jsonOk();
 
     default:
