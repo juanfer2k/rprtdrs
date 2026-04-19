@@ -328,7 +328,9 @@
                     <span class="fw-semibold small">#${p.id_pedido} ${p.cliente_nombre}</span>
                     <span class="badge bg-primary" style="font-size:.7rem">${p.estado}</span>
                 </div>
-                <p class="small mb-0" style="color:var(--muted)">${p.direccion_entrega}</p>
+                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.direccion_entrega)}"
+                   target="_blank" class="small d-block mt-1" style="color:var(--muted);word-break:break-word"
+                   title="Buscar en Google Maps">📍 ${p.direccion_entrega}</a>
             </div>
         `).join('') || '<p class="text-center py-4" style="color:var(--muted)">Sin pedidos activos</p>';
     }
@@ -336,9 +338,12 @@
     function renderTable(repartidores) {
         document.getElementById('driver-table').innerHTML = repartidores.map(r => {
             const hasCoords = r.latitud && r.longitud;
-            const click = hasCoords ? `onclick="map.setView([${r.latitud},${r.longitud}],16)"` : '';
+            const click = hasCoords
+                ? `onclick="map.setView([${r.latitud},${r.longitud}],16);if(markers[${r.id_repartidor}])markers[${r.id_repartidor}].openPopup()"`
+                : '';
             const ok = r.estado === 'Disponible' || r.estado === 'libre';
-            return `<tr class="driver-row" ${click} title="Ver en mapa">
+            const style = hasCoords ? 'cursor:pointer' : 'opacity:.6';
+            return `<tr class="driver-row" ${click} title="${hasCoords ? 'Ver en mapa' : 'Sin ubicación'}" style="${style}">
                 <td><strong>${r.nombre_completo}</strong></td>
                 <td><span class="badge ${ok ? 'bg-success' : 'bg-warning text-dark'}" style="font-size:.7rem">${r.estado}</span></td>
             </tr>`;

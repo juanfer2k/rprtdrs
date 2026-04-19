@@ -131,34 +131,20 @@
             }
         }
 
-        .theme-switcher {
+        #theme-btn {
             position: fixed;
             top: 16px;
             right: 16px;
             z-index: 1000;
-            display: flex;
-            align-items: center;
-            gap: 8px;
             background: rgba(15, 22, 44, 0.7);
             border: 1px solid var(--card-border);
             border-radius: 10px;
-            padding: 6px 10px;
+            padding: 6px 12px;
             backdrop-filter: blur(10px);
-        }
-
-        .theme-label {
-            font-size: .85rem;
-            color: var(--text-soft);
-            margin: 0;
-        }
-
-        #theme-select {
-            min-width: 96px;
-            border-radius: 8px;
-            border: 1px solid var(--input-border);
-            background: var(--input-bg);
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1;
             color: var(--text-main);
-            padding: 2px 8px;
         }
 
         html[data-bs-theme="light"] {
@@ -201,13 +187,7 @@
 </head>
 <body>
 
-<div class="theme-switcher">
-    <label for="theme-select" class="theme-label">Tema</label>
-    <select id="theme-select" class="form-select form-select-sm">
-        <option value="dark">Oscuro</option>
-        <option value="light">Claro</option>
-    </select>
-</div>
+<button id="theme-btn" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
 
 <div class="login-card">
     <div class="text-center mb-4">
@@ -233,22 +213,17 @@
 <script>
     const FALLBACK_NATIVE_BASE_URL = 'https://elcerritovalle.org/rprtdrs/';
 
-    function applyTheme(theme) {
-        const mode = theme === 'light' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-bs-theme', mode);
-        localStorage.setItem('theme', mode);
-        const themeSelect = document.getElementById('theme-select');
-        if (themeSelect) themeSelect.value = mode;
+    function applyTheme(dark) {
+        document.documentElement.setAttribute('data-bs-theme', dark ? 'dark' : 'light');
+        document.getElementById('theme-btn').textContent = dark ? '☀️' : '🌙';
+        localStorage.setItem('theme', dark ? 'dark' : 'light');
     }
 
-    (function initTheme() {
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        applyTheme(savedTheme);
-    })();
+    function toggleTheme() {
+        applyTheme(localStorage.getItem('theme') !== 'dark');
+    }
 
-    document.getElementById('theme-select').addEventListener('change', (e) => {
-        applyTheme(e.target.value);
-    });
+    applyTheme(localStorage.getItem('theme') !== 'light');
 
     function normalizeBaseUrl(url) {
         if (!url) return '';

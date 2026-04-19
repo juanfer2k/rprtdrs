@@ -62,7 +62,7 @@ switch ($action) {
                    COALESCE(u.nombre_completo, u.username) AS repartidor_nombre
             FROM pedidos p
             LEFT JOIN usuarios u ON u.id = p.id_repartidor
-            WHERE p.estado != 'entregado'
+            WHERE p.estado NOT IN ('entregado','cancelado')
             ORDER BY p.fecha_creacion DESC
         ")->fetchAll();
         jsonOk(array('pedidos' => $pedidos));
