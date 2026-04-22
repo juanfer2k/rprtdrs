@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Repartidores</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #f4f7f6;
@@ -22,8 +21,13 @@
             --text: #e4e6eb;
             --muted: #8b949e;
         }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); transition: background .2s, color .2s; }
-        .top-nav { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; align-items: center; gap: 12px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, sans-serif; background: var(--bg); color: var(--text); transition: background .2s, color .2s; }
+        .top-nav { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 8px 12px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: .875rem; }
+        .top-nav .top-nav-actions { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+        @media (max-width: 576px) {
+            .top-nav .top-nav-subtitle { display: none; }
+            .top-nav .btn { font-size: .75rem; padding: 3px 7px; }
+        }
         .card { background: var(--card-bg); border-color: var(--border); color: var(--text); }
         .card-header { background: var(--card-bg) !important; border-color: var(--border); }
         .table th { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
@@ -59,9 +63,9 @@
 <!-- ── Navbar ─────────────────────────────────────────────────────────────── -->
 <nav class="top-nav shadow-sm mb-4">
     <img src="assets/imgs/logo.png" class="logo-img" alt="Logo">
-    <strong class="me-2">Repartidores</strong>
-    <span style="color:var(--muted);font-size:.85rem">/ Gestión</span>
-    <div class="ms-auto d-flex align-items-center gap-2">
+    <strong>Repartidores</strong>
+    <span class="top-nav-subtitle" style="color:var(--muted);font-size:.85rem">/ Gestión</span>
+    <div class="top-nav-actions">
         <a href="panel.php" class="btn btn-outline-primary btn-sm">🗺 Monitor</a>
         <button id="theme-btn" class="btn btn-outline-secondary btn-sm" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
         <button class="btn btn-outline-danger btn-sm" onclick="logout()">Salir</button>
@@ -127,6 +131,108 @@
                     <p class="small mb-0" style="color:var(--muted)">Actualización automática cada 10 s.</p>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Pedidos ────────────────────────────────────────────────────────────── -->
+<div class="container-fluid px-4 mt-2 mb-5">
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+            <h5 class="mb-0">📦 Pedidos activos</h5>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoPedido">+ Nuevo pedido</button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">#</th>
+                            <th>Cliente</th>
+                            <th>Dirección</th>
+                            <th>Estado</th>
+                            <th>Repartidor</th>
+                            <th>Fecha</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-pedidos">
+                        <tr><td colspan="7" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: nuevo pedido ────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalNuevoPedido" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="form-nuevo-pedido">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuevo Pedido</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Cliente <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="ped-cliente" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Dirección de entrega <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="ped-direccion" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Asignar repartidor (opcional)</label>
+                        <select class="form-select" id="ped-repartidor">
+                            <option value="">— Sin asignar —</option>
+                        </select>
+                    </div>
+                    <div id="ped-nuevo-error" class="alert alert-danger d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear pedido</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: editar pedido ───────────────────────────────────────────────── -->
+<div class="modal fade" id="modalEditPedido" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="form-edit-pedido">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Pedido</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit-ped-id">
+                    <div class="mb-3">
+                        <label class="form-label">Estado</label>
+                        <select class="form-select" id="edit-ped-estado">
+                            <option value="pendiente">Pendiente</option>
+                            <option value="en camino">En camino</option>
+                            <option value="entregado">Entregado</option>
+                            <option value="cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Repartidor asignado</label>
+                        <select class="form-select" id="edit-ped-repartidor">
+                            <option value="">— Sin asignar —</option>
+                        </select>
+                    </div>
+                    <div id="ped-edit-error" class="alert alert-danger d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -291,6 +397,7 @@
             const data = await res.json();
             if (data.status !== 'success') throw new Error(data.message);
             allRows = data.repartidores;
+            window._repartidores = data.repartidores;
             renderTabla();
         } catch (e) { console.error(e); }
     }
@@ -536,6 +643,134 @@
 
     cargarRepartidores();
     setInterval(cargarRepartidores, 10000);
+
+    // ── Pedidos ───────────────────────────────────────────────────────────────
+    const ESTADOS_BADGE = {
+        'pendiente':  'warning',
+        'en camino':  'primary',
+        'entregado':  'success',
+        'cancelado':  'secondary',
+    };
+
+    async function cargarPedidos() {
+        const res  = await fetch('api/pedidos.php?action=todos', { headers: apiHeaders() });
+        const data = await res.json();
+        if (data.status !== 'success') return;
+        const tbody = document.getElementById('tabla-pedidos');
+        if (!data.pedidos.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">Sin pedidos activos</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.pedidos.map(p => `
+            <tr>
+                <td class="ps-3">${p.id_pedido}</td>
+                <td>${esc(p.cliente_nombre)}</td>
+                <td>${esc(p.direccion_entrega)}</td>
+                <td><span class="badge bg-${ESTADOS_BADGE[p.estado]||'secondary'}">${esc(p.estado)}</span></td>
+                <td>${esc(p.repartidor_nombre || '—')}</td>
+                <td style="font-size:.8rem">${p.fecha_creacion ? p.fecha_creacion.slice(0,16) : ''}</td>
+                <td class="text-nowrap">
+                    <button class="btn btn-outline-primary btn-sm" onclick="abrirEditPedido(${p.id_pedido},'${esc(p.estado)}',${p.id_repartidor||0})" title="Editar">✏️</button>
+                    <button class="btn btn-outline-danger btn-sm ms-1" onclick="eliminarPedido(${p.id_pedido},'${esc(p.cliente_nombre)}')" title="Eliminar">🗑</button>
+                </td>
+            </tr>`).join('');
+    }
+
+    function poblarSelectsRepartidores(selectId) {
+        const sel = document.getElementById(selectId);
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">— Sin asignar —</option>';
+        (window._repartidores || []).forEach(r => {
+            if (!r.activo) return;
+            const opt = document.createElement('option');
+            opt.value = r.uid;
+            opt.textContent = r.nombre_completo || r.username;
+            sel.appendChild(opt);
+        });
+        sel.value = currentVal;
+    }
+
+    document.getElementById('modalNuevoPedido').addEventListener('show.bs.modal', () => {
+        poblarSelectsRepartidores('ped-repartidor');
+        document.getElementById('ped-cliente').value = '';
+        document.getElementById('ped-direccion').value = '';
+        document.getElementById('ped-repartidor').value = '';
+        document.getElementById('ped-nuevo-error').classList.add('d-none');
+    });
+
+    document.getElementById('form-nuevo-pedido').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('ped-nuevo-error');
+        errEl.classList.add('d-none');
+        try {
+            const res = await fetch('api/pedidos.php?action=crear', {
+                method: 'POST', headers: apiHeaders(),
+                body: JSON.stringify({
+                    cliente_nombre:    document.getElementById('ped-cliente').value.trim(),
+                    direccion_entrega: document.getElementById('ped-direccion').value.trim(),
+                    id_repartidor:     document.getElementById('ped-repartidor').value || null,
+                })
+            });
+            const data = await res.json();
+            if (data.status !== 'success') throw new Error(data.message);
+            bootstrap.Modal.getInstance(document.getElementById('modalNuevoPedido')).hide();
+            toast('Pedido creado');
+            cargarPedidos();
+        } catch(err) {
+            errEl.textContent = err.message;
+            errEl.classList.remove('d-none');
+        }
+    });
+
+    window.abrirEditPedido = (id, estado, idRep) => {
+        document.getElementById('edit-ped-id').value = id;
+        document.getElementById('edit-ped-estado').value = estado;
+        poblarSelectsRepartidores('edit-ped-repartidor');
+        document.getElementById('edit-ped-repartidor').value = idRep || '';
+        document.getElementById('ped-edit-error').classList.add('d-none');
+        new bootstrap.Modal(document.getElementById('modalEditPedido')).show();
+    };
+
+    document.getElementById('form-edit-pedido').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('ped-edit-error');
+        errEl.classList.add('d-none');
+        const id = parseInt(document.getElementById('edit-ped-id').value);
+        try {
+            const [r1, r2] = await Promise.all([
+                fetch('api/pedidos.php?action=update_estado', {
+                    method: 'POST', headers: apiHeaders(),
+                    body: JSON.stringify({ id_pedido: id, estado: document.getElementById('edit-ped-estado').value })
+                }),
+                fetch('api/pedidos.php?action=asignar', {
+                    method: 'POST', headers: apiHeaders(),
+                    body: JSON.stringify({ id_pedido: id, id_repartidor: document.getElementById('edit-ped-repartidor').value || 0 })
+                }),
+            ]);
+            const d1 = await r1.json();
+            if (d1.status !== 'success') throw new Error(d1.message);
+            bootstrap.Modal.getInstance(document.getElementById('modalEditPedido')).hide();
+            toast('Pedido actualizado');
+            cargarPedidos();
+        } catch(err) {
+            errEl.textContent = err.message;
+            errEl.classList.remove('d-none');
+        }
+    });
+
+    window.eliminarPedido = async (id, cliente) => {
+        if (!confirm(`¿Eliminar pedido de "${cliente}"?`)) return;
+        const res  = await fetch('api/pedidos.php?action=eliminar', {
+            method: 'POST', headers: apiHeaders(),
+            body: JSON.stringify({ id_pedido: id })
+        });
+        const data = await res.json();
+        if (data.status === 'success') { toast('Pedido eliminado'); cargarPedidos(); }
+        else toast(data.message, false);
+    };
+
+    cargarPedidos();
+    setInterval(cargarPedidos, 15000);
 })();
 </script>
 

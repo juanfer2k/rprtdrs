@@ -5,9 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitor de Repartidores</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -26,7 +23,7 @@
             --muted: #8b949e;
         }
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, sans-serif;
             background: var(--body-bg);
             color: var(--text);
             transition: background 0.2s, color 0.2s;
@@ -82,11 +79,24 @@
             background: var(--sb-bg);
             border-bottom: 1px solid var(--sb-border);
             border-radius: 10px;
-            padding: 10px 16px;
+            padding: 8px 12px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            flex-wrap: wrap;
+            gap: 6px;
             flex-shrink: 0;
+            font-size: .875rem;
+        }
+        .top-bar .top-bar-actions {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        @media (max-width: 576px) {
+            .top-bar .top-bar-title { display: none; }
+            .top-bar .btn { font-size: .75rem; padding: 3px 7px; }
         }
         /* ── Cards / table ── */
         .order-card { cursor: pointer; transition: 0.2s; border-left: 5px solid #0d6efd; margin-bottom: 10px; border-radius: 8px; background: var(--sb-bg); color: var(--text); }
@@ -163,11 +173,11 @@
 
         <div class="top-bar">
             <img src="assets/imgs/logo.png" class="logo-img" alt="Logo">
-            <span class="fw-bold">Monitor de Repartidores</span>
-            <div class="ms-auto d-flex align-items-center gap-2">
+            <span class="fw-bold top-bar-title">Monitor de Repartidores</span>
+            <div class="top-bar-actions">
                 <span id="status-tag" class="badge bg-success">Conectado</span>
                 <a href="admin.php" class="btn btn-outline-secondary btn-sm">⚙️ Gestionar</a>
-                <button class="btn btn-primary btn-sm" onclick="fetchData()">↺ Refrescar</button>
+                <button class="btn btn-primary btn-sm" onclick="fetchData()">↺</button>
                 <button id="theme-btn" class="btn btn-outline-secondary btn-sm" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
             </div>
         </div>

@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Repartidores</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #f4f7f6;
@@ -22,8 +21,13 @@
             --text: #e4e6eb;
             --muted: #8b949e;
         }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); transition: background .2s, color .2s; }
-        .top-nav { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; align-items: center; gap: 12px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, sans-serif; background: var(--bg); color: var(--text); transition: background .2s, color .2s; }
+        .top-nav { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 8px 12px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: .875rem; }
+        .top-nav .top-nav-actions { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+        @media (max-width: 576px) {
+            .top-nav .top-nav-subtitle { display: none; }
+            .top-nav .btn { font-size: .75rem; padding: 3px 7px; }
+        }
         .card { background: var(--card-bg); border-color: var(--border); color: var(--text); }
         .card-header { background: var(--card-bg) !important; border-color: var(--border); }
         .table th { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
@@ -59,9 +63,9 @@
 <!-- ── Navbar ─────────────────────────────────────────────────────────────── -->
 <nav class="top-nav shadow-sm mb-4">
     <img src="assets/imgs/logo.png" class="logo-img" alt="Logo">
-    <strong class="me-2">Repartidores</strong>
-    <span style="color:var(--muted);font-size:.85rem">/ Gestión</span>
-    <div class="ms-auto d-flex align-items-center gap-2">
+    <strong>Repartidores</strong>
+    <span class="top-nav-subtitle" style="color:var(--muted);font-size:.85rem">/ Gestión</span>
+    <div class="top-nav-actions">
         <a href="panel.php" class="btn btn-outline-primary btn-sm">🗺 Monitor</a>
         <button id="theme-btn" class="btn btn-outline-secondary btn-sm" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
         <button class="btn btn-outline-danger btn-sm" onclick="logout()">Salir</button>

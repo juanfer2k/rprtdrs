@@ -165,6 +165,16 @@
             color: #1f2a44;
         }
 
+        [data-bs-theme="light"] .form-control {
+            color: #0f172a;
+            background-color: #ffffff;
+        }
+
+        [data-bs-theme="light"] .form-control:focus {
+            color: #0f172a;
+            background-color: #f8faff;
+        }
+
         [data-bs-theme="light"] .form-control::placeholder {
             color: #64748b;
         }
