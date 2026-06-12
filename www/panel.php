@@ -3,7 +3,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Monitor de Repartidores</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,6 +36,7 @@
             width: 300px;
             min-width: 300px;
             height: 100vh;
+            height: 100dvh;
             overflow-y: auto;
             overflow-x: hidden;
             background: var(--sb-bg);
@@ -53,7 +54,7 @@
         }
         #sidebar-inner { min-width: 260px; }
         /* ── Layout ── */
-        #layout { display: flex; height: 100vh; overflow: hidden; }
+        #layout { display: flex; height: 100vh; height: 100dvh; overflow: hidden; }
         #main-col { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
         /* ── Toggle button ── */
         #sidebar-toggle {
@@ -101,6 +102,37 @@
         /* ── Theme button ── */
         #theme-btn { font-size: 1rem; line-height: 1; padding: 4px 8px; }
         .logo-img { height: 28px; width: 28px; object-fit: contain; }
+        /* ── Backdrop del drawer móvil ── */
+        #sidebar-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,.45);
+            z-index: 1040; opacity: 0; pointer-events: none; transition: opacity .25s;
+        }
+        #sidebar-backdrop.show { opacity: 1; pointer-events: auto; }
+        #menu-btn { display: none; }
+        /* ── Móvil / tablet ── */
+        @media (max-width: 991px) {
+            #menu-btn { display: inline-flex; }
+            #sidebar-toggle { display: none !important; }
+            #sidebar {
+                position: fixed; top: 0; left: 0; bottom: 0;
+                width: min(85vw, 320px); min-width: 0;
+                z-index: 1050;
+                transform: translateX(-100%);
+                transition: transform .25s ease;
+                opacity: 1 !important; pointer-events: auto !important;
+                padding: 20px !important;
+                padding-top: calc(20px + env(safe-area-inset-top)) !important;
+                box-shadow: 4px 0 24px rgba(0,0,0,.3);
+            }
+            #sidebar.open { transform: translateX(0); }
+            #main-col { padding: 10px; gap: 10px; }
+            #main-col { padding-top: calc(10px + env(safe-area-inset-top)); }
+            .top-bar { flex-wrap: wrap; row-gap: 8px; padding: 8px 12px; }
+            #map { min-height: 0; border-radius: 10px; }
+        }
+        @media (max-width: 480px) {
+            .top-bar .fw-bold { font-size: .9rem; }
+        }
     </style>
 </head>
 <body>
@@ -152,13 +184,16 @@
         </div>
     </div>
 
-    <!-- ── Toggle button ───────────────────────────────────────── -->
+    <!-- ── Toggle button (desktop) ─────────────────────────────── -->
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Contraer panel">‹</button>
+    <!-- ── Backdrop (móvil) ────────────────────────────────────── -->
+    <div id="sidebar-backdrop" onclick="toggleSidebar()"></div>
 
     <!-- ── Main ────────────────────────────────────────────────── -->
     <div id="main-col">
 
         <div class="top-bar">
+            <button id="menu-btn" class="btn btn-outline-secondary btn-sm" onclick="toggleSidebar()" title="Abrir panel">☰</button>
             <img src="assets/imgs/logo.png" class="logo-img" alt="Logo">
             <span class="fw-bold">Monitor de Repartidores</span>
             <div class="ms-auto d-flex align-items-center gap-2">
@@ -180,28 +215,35 @@
     // ── Sidebar toggle ────────────────────────────────────────────────────────
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('sidebar-toggle');
-    let sidebarOpen = localStorage.getItem('sidebar') !== 'closed';
+    const backdrop = document.getElementById('sidebar-backdrop');
+    const mq = window.matchMedia('(max-width: 991px)');
+    let sidebarOpen = mq.matches ? false : (localStorage.getItem('sidebar') !== 'closed');
 
     function applySidebar() {
-        if (sidebarOpen) {
-            sidebar.classList.remove('collapsed');
-            toggleBtn.classList.remove('collapsed');
-            toggleBtn.textContent = '‹';
-            toggleBtn.style.left = '300px';
-        } else {
-            sidebar.classList.add('collapsed');
-            toggleBtn.classList.add('collapsed');
-            toggleBtn.textContent = '›';
-            toggleBtn.style.left = '0';
+        const mobile = mq.matches;
+        // Drawer móvil
+        sidebar.classList.toggle('open', mobile && sidebarOpen);
+        backdrop.classList.toggle('show', mobile && sidebarOpen);
+        // Colapso desktop
+        sidebar.classList.toggle('collapsed', !mobile && !sidebarOpen);
+        if (!mobile) {
+            toggleBtn.classList.toggle('collapsed', !sidebarOpen);
+            toggleBtn.textContent = sidebarOpen ? '‹' : '›';
+            toggleBtn.style.left = sidebarOpen ? '300px' : '0';
         }
         setTimeout(() => map.invalidateSize(), 300);
     }
 
     window.toggleSidebar = function () {
         sidebarOpen = !sidebarOpen;
-        localStorage.setItem('sidebar', sidebarOpen ? 'open' : 'closed');
+        if (!mq.matches) localStorage.setItem('sidebar', sidebarOpen ? 'open' : 'closed');
         applySidebar();
     };
+
+    mq.addEventListener('change', function () {
+        sidebarOpen = mq.matches ? false : (localStorage.getItem('sidebar') !== 'closed');
+        applySidebar();
+    });
 
     applySidebar();
 
@@ -221,7 +263,7 @@
     applyTheme();
 
     // ── Mapa ──────────────────────────────────────────────────────────────────
-    var map = L.map('map').setView([-34.6037, -58.3816], 13);
+    var map = L.map('map').setView([3.68472, -76.31361], 14);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap'
     }).addTo(map);
@@ -308,7 +350,7 @@
     function renderTable(repartidores) {
         document.getElementById('driver-table').innerHTML = repartidores.map(r => {
             const hasCoords = r.latitud && r.longitud;
-            const click = hasCoords ? `onclick="map.setView([${r.latitud},${r.longitud}],16)"` : '';
+            const click = hasCoords ? `onclick="map.setView([${r.latitud},${r.longitud}],16); if (window.matchMedia('(max-width: 991px)').matches) toggleSidebar();"` : '';
             const ok = r.estado === 'Disponible' || r.estado === 'libre';
             return `<tr class="driver-row" ${click} title="Ver en mapa">
                 <td><strong>${r.nombre_completo}</strong></td>

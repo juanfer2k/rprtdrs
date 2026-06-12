@@ -3,7 +3,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Gestión de Repartidores</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -43,6 +43,10 @@
         #toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
         .logo-img { height: 28px; width: 28px; object-fit: contain; }
         .status-badge { font-size: .72rem; }
+        @media (max-width: 576px) {
+            .top-nav { flex-wrap: wrap; row-gap: 8px; padding: 8px 12px; }
+            .container-fluid.px-4 { padding-left: .75rem !important; padding-right: .75rem !important; }
+        }
     </style>
 </head>
 <body>

@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Panel Repartidor</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css?v=2.0" />
+    <link rel="stylesheet" href="style.css?v=2.1" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         /* ── Profile modal overlay ── */
@@ -24,7 +24,7 @@
             border-radius: 16px;
             padding: 24px;
             width: min(94vw, 380px);
-            max-height: 90vh;
+            max-height: calc(100vh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
             overflow-y: auto;
         }
         #perfil-card h3 { margin: 0 0 16px; font-size: 1.1rem; }
@@ -109,10 +109,12 @@
         <div id="controls-wrapper" class="disabled">
             <h3>Mi Estado</h3>
             <div id="status-display">Actual: <span id="current-status">—</span></div>
-            <button id="status-available">Disponible</button>
-            <button id="status-unavailable">No disponible</button>
-            <button id="status-pickup">En camino a recoger</button>
-            <button id="status-delivered">En camino a entrega</button>
+            <div class="status-grid">
+                <button id="status-available">Disponible</button>
+                <button id="status-unavailable">No disponible</button>
+                <button id="status-pickup">En camino a recoger</button>
+                <button id="status-delivered">En camino a entrega</button>
+            </div>
             <button id="status-order-delivered" class="order-delivered-btn">✓ Pedido Entregado</button>
             <button id="get-location">Actualizar Mi Ubicación</button>
 
@@ -201,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ── Mapa ─────────────────────────────────────────────────────────────────
-    var map = L.map('map', { zoomControl: false }).setView([4.60971, -74.08175], 15);
+    var map = L.map('map', { zoomControl: false }).setView([3.68472, -76.31361], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OSM' }).addTo(map);
     var userMarker = L.marker(map.getCenter()).addTo(map).bindPopup('<b>Mi ubicación</b>');
 
@@ -241,18 +243,73 @@ document.addEventListener('DOMContentLoaded', function () {
     cargarPerfil();
 
     // ── GPS ───────────────────────────────────────────────────────────────────
-    function startWatch() {
+    // En el APK (Capacitor) se usa el plugin BackgroundGeolocation: corre como
+    // foreground service con notificación persistente, así sigue enviando la
+    // ubicación con la pantalla apagada o la app en segundo plano.
+    // En navegador (web) cae a navigator.geolocation.watchPosition.
+    var BgGeo = (window.Capacitor && window.Capacitor.isNativePlatform() && window.Capacitor.registerPlugin)
+        ? window.Capacitor.registerPlugin('BackgroundGeolocation')
+        : null;
+    var bgWatcherId = null;
+
+    function onPosition(lat, lng) {
+        lastPos = { lat: lat, lng: lng };
+        userMarker.setLatLng([lat, lng]);
+        map.panTo([lat, lng]);
+        sendUpdate(false);
+    }
+
+    function startWebWatch() {
         if (watchId !== null) navigator.geolocation.clearWatch(watchId);
         watchId = navigator.geolocation.watchPosition(
-            function(pos) {
-                lastPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                userMarker.setLatLng([lastPos.lat, lastPos.lng]);
-                map.panTo([lastPos.lat, lastPos.lng]);
-                sendUpdate(false);
-            },
+            function(pos) { onPosition(pos.coords.latitude, pos.coords.longitude); },
             function() { toast('GPS: sin señal', '!'); },
             { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 }
         );
+    }
+
+    function startBackgroundWatch() {
+        if (bgWatcherId !== null) return; // ya hay un watcher activo
+        BgGeo.addWatcher(
+            {
+                backgroundTitle: 'Rastreo activo',
+                backgroundMessage: 'Compartiendo tu ubicación con el panel',
+                requestPermissions: true,
+                stale: false,
+                distanceFilter: 10
+            },
+            function (location, error) {
+                if (error) {
+                    if (error.code === 'NOT_AUTHORIZED') {
+                        if (window.confirm('La app necesita permiso de ubicación para el rastreo.\n¿Abrir ajustes para activarlo?')) {
+                            BgGeo.openSettings();
+                        }
+                    } else {
+                        toast('GPS: ' + (error.message || 'sin señal'), '!');
+                    }
+                    return;
+                }
+                onPosition(location.latitude, location.longitude);
+            }
+        ).then(function (id) {
+            bgWatcherId = id;
+        }).catch(function () {
+            // Plugin no instalado en este APK: caer al GPS del WebView
+            BgGeo = null;
+            startWebWatch();
+        });
+    }
+
+    function stopBackgroundWatch() {
+        if (BgGeo && bgWatcherId !== null) {
+            BgGeo.removeWatcher({ id: bgWatcherId }).catch(function(){});
+            bgWatcherId = null;
+        }
+    }
+
+    function startWatch() {
+        if (BgGeo) startBackgroundWatch();
+        else startWebWatch();
     }
 
     function sendUpdate(force) {
@@ -296,6 +353,8 @@ document.addEventListener('DOMContentLoaded', function () {
             b.classList.toggle('active', b.id === id);
         });
         sendUpdate(true);
+        if (id === 'status-unavailable') stopBackgroundWatch();
+        else startWatch();
     }
 
     document.querySelectorAll('#controls-wrapper button[id^="status-"]').forEach(function(btn) {
@@ -308,6 +367,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('get-location').addEventListener('click', function() {
         toast('Buscando señal GPS...', '🛰️');
+        stopBackgroundWatch();
         startWatch();
     });
 
@@ -451,6 +511,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setInterval(cargarPedidos, 30000);
 
     window.logout = function() {
+        stopBackgroundWatch();
         localStorage.removeItem('api_token');
         localStorage.removeItem('admin_token');
         localStorage.removeItem('repartidor_id');
